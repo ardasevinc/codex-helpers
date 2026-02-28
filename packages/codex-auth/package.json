@@ -1,0 +1,13 @@
+{
+  "name": "codex-auth",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "codex-auth": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "ansis": "^4.2.0",
+    "citty": "^0.2.1"
+  }
+}
