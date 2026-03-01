@@ -43,10 +43,13 @@ codex-helpers/
         │   │   └── paths.ts      # path resolution constants
         │   └── types.ts      # shared type definitions
         └── tests/
+            ├── helpers.ts
             ├── accounts.test.ts
             ├── auth.test.ts
+            ├── display.test.ts
             ├── usage.test.ts
             └── commands/
+                ├── helpers.ts
                 ├── save.test.ts
                 ├── use.test.ts
                 ├── list.test.ts
