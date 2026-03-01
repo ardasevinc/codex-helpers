@@ -9,8 +9,7 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { Account, ActiveAccount, CodexAuth } from '../types.ts'
 import { accountPath, accountsDir, activeFile, defaultAuthPath, validateName } from './paths.ts'
 
@@ -70,6 +69,7 @@ export function listAccounts(): Account[] {
 	return files
 		.map((f) => {
 			const name = f.replace(/\.json$/, '')
+			if (!validateName(name)) return null
 			try {
 				const content = readFileSync(join(dir, f), 'utf-8')
 				const auth = JSON.parse(content) as CodexAuth
@@ -106,6 +106,7 @@ export function exportAccounts(): Record<string, CodexAuth> {
 
 	for (const f of files) {
 		const name = f.replace(/\.json$/, '')
+		if (!validateName(name)) continue
 		try {
 			const content = readFileSync(join(dir, f), 'utf-8')
 			result[name] = JSON.parse(content) as CodexAuth
@@ -151,7 +152,10 @@ function setActive(name: string): void {
 }
 
 function atomicWrite(dest: string, content: string): void {
-	const tmp = join(tmpdir(), `codex-auth-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+	const tmp = join(
+		dirname(dest),
+		`.codex-auth-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+	)
 	writeFileSync(tmp, content, 'utf-8')
 	renameSync(tmp, dest)
 }
