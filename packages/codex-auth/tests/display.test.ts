@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { formatTimeRemaining, renderBar } from '../src/lib/display.ts'
 
+function expectColorOrPlain(bar: string, ansiCode: string, plainBar: string) {
+	if (bar.includes('\x1b[')) {
+		expect(bar).toContain(ansiCode)
+		return
+	}
+	expect(bar).toBe(plainBar)
+}
+
 describe('renderBar', () => {
 	test('renders at 0%', () => {
 		const bar = renderBar(0)
@@ -30,28 +38,27 @@ describe('renderBar', () => {
 
 	test('applies green color below 50%', () => {
 		const bar = renderBar(30)
-		// ANSI green: ESC[32m
-		expect(bar).toContain('\x1b[32m')
+		expectColorOrPlain(bar, '\x1b[32m', '███░░░░░░░')
 	})
 
 	test('applies yellow color at 50%', () => {
 		const bar = renderBar(50)
-		expect(bar).toContain('\x1b[33m')
+		expectColorOrPlain(bar, '\x1b[33m', '█████░░░░░')
 	})
 
 	test('applies yellow color at 79%', () => {
 		const bar = renderBar(79)
-		expect(bar).toContain('\x1b[33m')
+		expectColorOrPlain(bar, '\x1b[33m', '████████░░')
 	})
 
 	test('applies red color at 80%', () => {
 		const bar = renderBar(80)
-		expect(bar).toContain('\x1b[31m')
+		expectColorOrPlain(bar, '\x1b[31m', '████████░░')
 	})
 
 	test('applies red color at 100%', () => {
 		const bar = renderBar(100)
-		expect(bar).toContain('\x1b[31m')
+		expectColorOrPlain(bar, '\x1b[31m', '██████████')
 	})
 })
 

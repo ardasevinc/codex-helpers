@@ -63,7 +63,7 @@ describe('saveAccount', () => {
 		accounts.saveAccount('personal', authPath)
 
 		const newAuth = mockAuth({ tokens: { ...mockAuth().tokens, access_token: 'new-token' } })
-		// Write new auth to a temp path (not the symlinked one)
+		// Write new auth to a separate temp path
 		const newAuthPath = join(tmpDir, 'auth-new.json')
 		writeFileSync(newAuthPath, JSON.stringify(newAuth, null, 2))
 		accounts.saveAccount('personal', newAuthPath)
