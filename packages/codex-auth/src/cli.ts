@@ -3,7 +3,10 @@
 import { defineCommand, runMain } from 'citty'
 import pkg from '../package.json'
 import { currentCommand } from './commands/current.ts'
+import { exportCommand } from './commands/export.ts'
+import { importCommand } from './commands/import.ts'
 import { listCommand } from './commands/list.ts'
+import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
 
@@ -18,6 +21,9 @@ const main = defineCommand({
 		use: useCommand,
 		list: listCommand,
 		current: currentCommand,
+		export: exportCommand,
+		import: importCommand,
+		push: pushCommand,
 	},
 	async run({ rawArgs }) {
 		// Default to interactive use when no subcommand given

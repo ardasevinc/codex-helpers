@@ -97,6 +97,51 @@ export function accountExists(name: string): boolean {
 	return existsSync(accountPath(name))
 }
 
+export function exportAccounts(): Record<string, CodexAuth> {
+	const dir = accountsDir()
+	if (!existsSync(dir)) return {}
+
+	const files = readdirSync(dir).filter((f) => f.endsWith('.json') && f !== '_active.json')
+	const result: Record<string, CodexAuth> = {}
+
+	for (const f of files) {
+		const name = f.replace(/\.json$/, '')
+		try {
+			const content = readFileSync(join(dir, f), 'utf-8')
+			result[name] = JSON.parse(content) as CodexAuth
+		} catch {
+			// skip corrupted snapshots
+		}
+	}
+
+	return result
+}
+
+export function importAccounts(
+	data: Record<string, CodexAuth>,
+	overwrite = false,
+): { imported: string[]; skipped: string[] } {
+	const imported: string[] = []
+	const skipped: string[] = []
+
+	ensureAccountsDir()
+
+	for (const [name, auth] of Object.entries(data)) {
+		if (!validateName(name)) {
+			skipped.push(name)
+			continue
+		}
+		if (!overwrite && accountExists(name)) {
+			skipped.push(name)
+			continue
+		}
+		atomicWrite(accountPath(name), JSON.stringify(auth, null, 2))
+		imported.push(name)
+	}
+
+	return { imported, skipped }
+}
+
 function setActive(name: string): void {
 	const active: ActiveAccount = {
 		name,

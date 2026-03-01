@@ -147,6 +147,91 @@ describe('listAccounts', () => {
 	})
 })
 
+describe('exportAccounts', () => {
+	test('returns all saved accounts as name→auth map', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		const altAuth = mockAuth({
+			tokens: { ...mockAuth().tokens, access_token: 'alt-token' },
+		})
+		const altPath = join(tmpDir, 'auth-alt.json')
+		writeFileSync(altPath, JSON.stringify(altAuth, null, 2))
+		accounts.saveAccount('alt', altPath)
+
+		const exported = accounts.exportAccounts()
+		expect(Object.keys(exported).sort()).toEqual(['alt', 'personal'])
+		expect(exported.personal!.tokens.access_token).toBe('test-access-token')
+		expect(exported.alt!.tokens.access_token).toBe('alt-token')
+	})
+
+	test('returns empty object when no accounts', () => {
+		expect(accounts.exportAccounts()).toEqual({})
+	})
+})
+
+describe('importAccounts', () => {
+	test('creates snapshot files for each entry', () => {
+		const data = {
+			main: mockAuth(),
+			alt: mockAuth({
+				tokens: { ...mockAuth().tokens, access_token: 'alt-token' },
+			}),
+		}
+
+		const result = accounts.importAccounts(data)
+		expect(result.imported.sort()).toEqual(['alt', 'main'])
+		expect(result.skipped).toEqual([])
+
+		const saved = JSON.parse(readFileSync(accountPath('main'), 'utf-8'))
+		expect(saved.tokens.access_token).toBe('test-access-token')
+	})
+
+	test('skips existing accounts by default', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		const data = {
+			personal: mockAuth({
+				tokens: { ...mockAuth().tokens, access_token: 'new-token' },
+			}),
+			fresh: mockAuth(),
+		}
+
+		const result = accounts.importAccounts(data)
+		expect(result.imported).toEqual(['fresh'])
+		expect(result.skipped).toEqual(['personal'])
+
+		// Original should be untouched
+		const saved = JSON.parse(readFileSync(accountPath('personal'), 'utf-8'))
+		expect(saved.tokens.access_token).toBe('test-access-token')
+	})
+
+	test('overwrites existing accounts when overwrite is true', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		const data = {
+			personal: mockAuth({
+				tokens: { ...mockAuth().tokens, access_token: 'overwritten' },
+			}),
+		}
+
+		const result = accounts.importAccounts(data, true)
+		expect(result.imported).toEqual(['personal'])
+
+		const saved = JSON.parse(readFileSync(accountPath('personal'), 'utf-8'))
+		expect(saved.tokens.access_token).toBe('overwritten')
+	})
+
+	test('skips invalid account names', () => {
+		const data = { 'bad name': mockAuth(), valid: mockAuth() }
+		const result = accounts.importAccounts(data)
+		expect(result.imported).toEqual(['valid'])
+		expect(result.skipped).toEqual(['bad name'])
+	})
+})
+
 describe('getActiveAccount', () => {
 	test('returns null when no active account', () => {
 		expect(accounts.getActiveAccount()).toBeNull()
