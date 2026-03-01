@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { defineCommand, runMain } from 'citty'
+import pkg from '../package.json'
 import { currentCommand } from './commands/current.ts'
 import { listCommand } from './commands/list.ts'
 import { saveCommand } from './commands/save.ts'
@@ -9,7 +10,7 @@ import { runUseInteractive, useCommand } from './commands/use.ts'
 const main = defineCommand({
 	meta: {
 		name: 'codex-auth',
-		version: '0.1.0',
+		version: pkg.version,
 		description: 'Manage multiple Codex CLI accounts with usage monitoring',
 	},
 	subCommands: {
