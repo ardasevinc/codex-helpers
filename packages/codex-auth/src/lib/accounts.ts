@@ -1,16 +1,16 @@
 import {
+	copyFileSync,
 	existsSync,
 	lstatSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
 	renameSync,
-	symlinkSync,
 	unlinkSync,
 	writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import type { Account, ActiveAccount, CodexAuth } from '../types.ts'
 import { accountPath, accountsDir, activeFile, defaultAuthPath, validateName } from './paths.ts'
 
@@ -38,12 +38,12 @@ export function saveAccount(name: string, authPath: string): void {
 
 	setActive(name)
 
-	// Replace auth.json with symlink
+	// Copy snapshot to auth.json (regular file, not symlink)
 	const target = defaultAuthPath()
-	if (existsSync(target) || isSymlinkAt(target)) {
+	if (isSymlinkAt(target)) {
 		unlinkSync(target)
 	}
-	symlinkSync(resolve(dest), target)
+	copyFileSync(accountPath(name), target)
 }
 
 export function switchAccount(name: string): void {
@@ -53,11 +53,10 @@ export function switchAccount(name: string): void {
 	}
 
 	const target = defaultAuthPath()
-	if (existsSync(target) || isSymlinkAt(target)) {
+	if (isSymlinkAt(target)) {
 		unlinkSync(target)
 	}
-
-	symlinkSync(resolve(src), target)
+	copyFileSync(src, target)
 	setActive(name)
 }
 

@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { defineCommand } from 'citty'
 import { accountExists, saveAccount } from '../lib/accounts.ts'
-import { defaultAuthPath, resolveAuthPath, validateName } from '../lib/paths.ts'
+import { resolveAuthPath, validateName } from '../lib/paths.ts'
 
 export const saveCommand = defineCommand({
 	meta: {
@@ -46,9 +46,8 @@ export const saveCommand = defineCommand({
 			process.exit(1)
 		}
 
-		const target = defaultAuthPath()
 		p.note(
-			`Linked: ${target} → ~/.codex/accounts/${name}.json\nThis account is now active.`,
+			`Copied to ~/.codex/accounts/${name}.json\nThis account is now active.`,
 			`Saved current session as "${name}"`,
 		)
 	},

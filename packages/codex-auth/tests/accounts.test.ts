@@ -35,12 +35,12 @@ describe('saveAccount', () => {
 		expect(existsSync(join(tmpDir, 'accounts'))).toBe(true)
 	})
 
-	test('creates symlink to snapshot', () => {
+	test('creates regular file copy of snapshot', () => {
 		const authPath = writeAuthFile(tmpDir)
 		accounts.saveAccount('personal', authPath)
 
 		const target = join(tmpDir, 'auth.json')
-		expect(lstatSync(target).isSymbolicLink()).toBe(true)
+		expect(lstatSync(target).isFile()).toBe(true)
 	})
 
 	test('sets account as active after save', () => {
@@ -92,12 +92,31 @@ describe('switchAccount', () => {
 		expect(() => accounts.switchAccount('nonexistent')).toThrow('not found')
 	})
 
-	test('updates symlink on switch', () => {
+	test('copies snapshot to auth path on switch', () => {
 		const authPath = writeAuthFile(tmpDir)
 		accounts.saveAccount('personal', authPath)
 
 		const target = join(tmpDir, 'auth.json')
-		expect(lstatSync(target).isSymbolicLink()).toBe(true)
+		expect(lstatSync(target).isFile()).toBe(true)
+	})
+})
+
+describe('snapshot isolation', () => {
+	test('does not corrupt snapshot when auth.json is overwritten', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		// Simulate codex CLI overwriting auth.json with new account
+		const target = join(tmpDir, 'auth.json')
+		const newAuth = mockAuth({
+			tokens: { ...mockAuth().tokens, access_token: 'different-account' },
+		})
+		writeFileSync(target, JSON.stringify(newAuth, null, 2))
+
+		// Original snapshot should be untouched
+		const snapshotPath = accountPath('personal')
+		const saved = JSON.parse(readFileSync(snapshotPath, 'utf-8'))
+		expect(saved.tokens.access_token).toBe('test-access-token')
 	})
 })
 
