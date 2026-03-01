@@ -2,6 +2,8 @@
 
 Bun monorepo for Codex CLI helper tools.
 
+> **Disclaimer**: This project is not affiliated with, endorsed by, or associated with OpenAI. It's an independent developer utility that works with the [Codex CLI](https://github.com/openai/codex).
+
 ## Packages
 
 - `packages/codex-auth`: switch between saved Codex auth sessions and view usage.
