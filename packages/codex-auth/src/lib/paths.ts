@@ -51,7 +51,7 @@ export function resolveAuthPath(): string | null {
 	return null
 }
 
-/** Get the default auth.json path (for symlink target) */
+/** Get the default auth.json path used by the active Codex session */
 export function defaultAuthPath(): string {
 	const codexHome = process.env.CODEX_HOME
 	if (codexHome) return join(codexHome, AUTH_FILE)

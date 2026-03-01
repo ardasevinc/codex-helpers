@@ -128,11 +128,11 @@ Saved accounts are stored as JSON snapshots under `~/.codex/accounts/`:
 
 ### Switching Mechanism
 
-On macOS/Linux: create a symlink at `~/.codex/auth.json` pointing to `~/.codex/accounts/<name>.json`.
+Always copy the selected snapshot into `~/.codex/auth.json` (regular file).
 
-If the platform doesn't support symlinks (Windows): copy the file instead.
+If `~/.codex/auth.json` is an old symlink from previous versions, remove the symlink first, then copy the snapshot.
 
-Before switching, if `auth.json` exists and is a regular file (not a symlink), warn the user that it will be replaced.
+Rationale: symlinks are transparent to writes. If `auth.json` points to a snapshot file, a later `codex` login can overwrite that snapshot and corrupt saved accounts.
 
 ---
 
@@ -152,13 +152,13 @@ Snapshot the current `auth.json` as a named account.
 4. If account `name` already exists, prompt for overwrite confirmation via clack confirm.
 5. Copy auth.json contents to `~/.codex/accounts/<name>.json`.
 6. Set `_active.json` to this account name.
-7. If auth.json was a regular file (not symlink), replace it with a symlink to the new snapshot.
+7. Replace `~/.codex/auth.json` with a regular-file copy of the new snapshot (unlink old symlink first, if present).
 8. Display success message with account name.
 
 **Output:**
 ```
 ◆ Saved current session as "personal"
-│ Linked: ~/.codex/auth.json → ~/.codex/accounts/personal.json
+│ Copied to ~/.codex/accounts/personal.json
 └ This account is now active.
 ```
 
@@ -173,7 +173,7 @@ Switch to a saved account.
 1. Check account exists in `~/.codex/accounts/<name>.json`. Error if not.
 2. Fetch usage data for the target account (see Usage API section).
 3. Display usage before switching (so user can confirm).
-4. Create/update symlink: `~/.codex/auth.json` → `~/.codex/accounts/<name>.json`.
+4. Copy snapshot to `~/.codex/auth.json` (regular file; unlink old symlink first if present).
 5. Update `_active.json`.
 6. Display success.
 
@@ -453,8 +453,8 @@ All tests use `bun:test`. Tests should mock filesystem and network operations �
 - handles missing auth.json gracefully
 - handles missing accounts directory gracefully
 - reads auth.json from correct path based on resolution order
-- handles symlink creation for switching
-- handles regular file replacement with symlink
+- handles old symlink migration (unlink then copy)
+- copies snapshot to auth.json as a regular file
 - updates _active.json on switch
 ```
 
@@ -503,7 +503,7 @@ All tests use `bun:test`. Tests should mock filesystem and network operations �
 - errors when no auth.json exists
 - errors on invalid name
 - prompts for overwrite when account exists
-- creates symlink after save
+- creates regular-file auth.json copy after save
 - sets account as active after save
 ```
 
@@ -514,7 +514,7 @@ All tests use `bun:test`. Tests should mock filesystem and network operations �
 - errors when account doesn't exist
 - interactive mode lists all accounts with usage
 - interactive mode pre-selects current account
-- updates symlink on switch
+- updates auth.json by copying snapshot
 - updates _active.json on switch
 - displays usage after switch
 - handles usage fetch failure gracefully during switch
@@ -566,9 +566,9 @@ Create a `tests/helpers.ts` with:
 
 ## Edge Cases & Notes
 
-- If `auth.json` is a symlink pointing to a deleted file, treat it as "no auth.json found."
+- If `auth.json` is a symlink from an older version, unlink it before copying the selected snapshot.
 - Account names are case-sensitive (`Work` and `work` are different accounts).
-- If the user runs `codex-auth save` while auth.json is already a symlink to an account, update that account's snapshot (re-save the current session data into the existing snapshot).
+- If the user runs `codex-auth save` while auth.json is already linked by an older version, read auth contents via resolved path and save the snapshot normally.
 - The tool should never log or display tokens/secrets. Only show account names, usage percentages, and plan type.
 - All file operations should use atomic writes where possible (write to temp file, then rename) to prevent corruption if interrupted.
 
