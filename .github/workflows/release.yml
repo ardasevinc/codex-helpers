@@ -1,0 +1,56 @@
+name: Release CLI Binaries
+
+on:
+  push:
+    tags:
+      - '*-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - bun-linux-x64
+          - bun-linux-arm64
+          - bun-darwin-x64
+          - bun-darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Parse tag
+        id: parse
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          PACKAGE="${TAG%-v*}"
+          VERSION="${TAG##*-v}"
+          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Compile CLI
+        env:
+          TARGET: ${{ matrix.target }}
+          PACKAGE: ${{ steps.parse.outputs.package }}
+        run: |
+          SUFFIX="${TARGET#bun-}"
+          bun build --compile --minify --target="${TARGET}" \
+            "packages/${PACKAGE}/src/cli.ts" \
+            --outfile "${PACKAGE}-${SUFFIX}"
+
+      - name: Upload release asset
+        env:
+          TARGET: ${{ matrix.target }}
+          TAG: ${{ steps.parse.outputs.tag }}
+          PACKAGE: ${{ steps.parse.outputs.package }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SUFFIX="${TARGET#bun-}"
+          gh release upload "${TAG}" "${PACKAGE}-${SUFFIX}" --clobber
