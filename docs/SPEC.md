@@ -1,6 +1,6 @@
 # codex-helpers: codex-auth Specification
 
-> v1 MVP — Account switcher with usage monitoring for OpenAI Codex CLI
+> Account switcher with usage monitoring for OpenAI Codex CLI
 
 ## Overview
 
@@ -32,7 +32,10 @@ codex-helpers/
         │   │   ├── save.ts   # `codex-auth save <name>`
         │   │   ├── use.ts    # `codex-auth use [name]`
         │   │   ├── list.ts   # `codex-auth list`
-        │   │   └── current.ts# `codex-auth current`
+        │   │   ├── current.ts# `codex-auth current`
+        │   │   ├── export.ts # `codex-auth export`
+        │   │   ├── import.ts # `codex-auth import`
+        │   │   └── push.ts   # `codex-auth push <host>`
         │   ├── lib/
         │   │   ├── accounts.ts   # account CRUD (snapshot, restore, list)
         │   │   ├── auth.ts       # auth.json reading, token refresh
@@ -62,18 +65,17 @@ codex-helpers/
 
 No other dependencies unless strictly necessary.
 
-### Installation (Development)
+### Installation
 
 ```bash
-# from repo root
-bun install
+# Binary install (any machine)
+curl -fsSL https://raw.githubusercontent.com/ardasevinc/codex-helpers/main/install.sh | sh -s -- codex-auth
 
-# link globally for local use
+# Development (from repo root)
+bun install
 cd packages/codex-auth
 bun link
 ```
-
-After linking, `codex-auth` is available as a global command.
 
 ---
 
@@ -253,6 +255,74 @@ Show the currently active account and its usage.
    ```
    │ credits: $5.39 remaining
    ```
+
+### `codex-auth export`
+
+Export all saved accounts as a JSON object to stdout. Designed for piping — no interactive UI on stdout.
+
+**Behavior:**
+1. Read all account snapshots from `~/.codex/accounts/`.
+2. Output a JSON object mapping account names to their `CodexAuth` data.
+3. If no accounts exist, write error to stderr and exit 1.
+
+**Output (stdout):**
+```json
+{
+  "personal": { "OPENAI_API_KEY": null, "tokens": { ... }, "last_refresh": "..." },
+  "work": { "OPENAI_API_KEY": null, "tokens": { ... }, "last_refresh": "..." }
+}
+```
+
+Active account metadata (`_active.json`) is not exported — each machine manages its own active state.
+
+### `codex-auth import [--overwrite]`
+
+Import accounts from JSON on stdin.
+
+**Args:**
+- `--overwrite` (optional): Replace existing accounts. Without this flag, existing accounts are skipped.
+
+**Behavior:**
+1. Read JSON from stdin (e.g. piped from `codex-auth export`).
+2. Validate the input is a JSON object mapping names to `CodexAuth` data.
+3. For each entry: validate the name, skip if account exists (unless `--overwrite`), write snapshot.
+4. Report results: how many imported, how many skipped.
+
+**Usage:**
+```bash
+# Pipe between machines
+codex-auth export | ssh vps 'codex-auth import'
+
+# With overwrite
+codex-auth export | ssh vps 'codex-auth import --overwrite'
+```
+
+### `codex-auth push <host> [--overwrite]`
+
+Push all accounts to a remote host via SSH. Does not require `codex-auth` to be installed on the remote — writes snapshot files directly.
+
+**Args:**
+- `host` (required, positional): SSH host (e.g. `user@vps`, `vps-alias`).
+- `--overwrite` (optional): Replace existing accounts on remote.
+
+**Behavior:**
+1. Export all local accounts.
+2. SSH to host, create `~/.codex/accounts/` if needed.
+3. For each account: check if remote file exists (skip unless `--overwrite`), write snapshot via SSH stdin.
+4. Report results per-account (pushed/skipped/failed).
+
+**Usage:**
+```bash
+codex-auth push my-vps
+codex-auth push user@192.168.1.10 --overwrite
+```
+
+**Output:**
+```
+◆ my-vps: 2 pushed, 0 skipped
+│ Pushed: personal, work
+└
+```
 
 ### Default Command (no subcommand)
 
@@ -574,15 +644,12 @@ Create a `tests/helpers.ts` with:
 
 ---
 
-## Future Considerations (NOT in v1)
-
-These are documented for context but explicitly out of scope:
+## Future Considerations
 
 - Auto-rotation: detect rate limit hit, auto-switch to least-loaded account
 - macOS keychain support for auth reading
 - `codex-auth remove <name>` command
 - `codex-auth rename <old> <new>` command
-- Publishing as npm package
 - Shell completions
 - Integration with codex CLI as a wrapper/plugin
 - Notifications when usage is approaching limits
