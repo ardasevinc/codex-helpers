@@ -30,6 +30,10 @@ const main = defineCommand({
 		push: pushCommand,
 	},
 	async run({ rawArgs }) {
+		if (rawArgs.length === 1 && (rawArgs[0] === '-v' || rawArgs[0] === '-V')) {
+			console.log(pkg.version)
+			return
+		}
 		// Default to interactive use when no subcommand given
 		if (rawArgs.length === 0) {
 			await runUseInteractive()
