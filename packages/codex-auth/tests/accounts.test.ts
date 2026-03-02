@@ -232,6 +232,60 @@ describe('importAccounts', () => {
 	})
 })
 
+describe('deleteAccount', () => {
+	test('removes snapshot file', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+		expect(existsSync(accountPath('personal'))).toBe(true)
+
+		accounts.deleteAccount('personal')
+		expect(existsSync(accountPath('personal'))).toBe(false)
+	})
+
+	test('clears active tracker if deleted account was active', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+		expect(accounts.getActiveAccount()?.name).toBe('personal')
+
+		accounts.deleteAccount('personal')
+		expect(accounts.getActiveAccount()).toBeNull()
+	})
+
+	test('preserves active tracker if deleted account was not active', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		const workPath = join(tmpDir, 'auth-work.json')
+		writeFileSync(workPath, JSON.stringify(mockAuth(), null, 2))
+		accounts.saveAccount('work', workPath)
+
+		// work is now active, delete personal
+		accounts.deleteAccount('personal')
+		expect(accounts.getActiveAccount()?.name).toBe('work')
+	})
+
+	test('throws on invalid name', () => {
+		expect(() => accounts.deleteAccount('bad name')).toThrow('Invalid account name')
+	})
+
+	test('throws on nonexistent account', () => {
+		expect(() => accounts.deleteAccount('ghost')).toThrow('not found')
+	})
+
+	test('account no longer appears in listAccounts', () => {
+		const authPath = writeAuthFile(tmpDir)
+		accounts.saveAccount('personal', authPath)
+
+		const workPath = join(tmpDir, 'auth-work.json')
+		writeFileSync(workPath, JSON.stringify(mockAuth(), null, 2))
+		accounts.saveAccount('work', workPath)
+
+		accounts.deleteAccount('personal')
+		const names = accounts.listAccounts().map((a) => a.name)
+		expect(names).toEqual(['work'])
+	})
+})
+
 describe('getActiveAccount', () => {
 	test('returns null when no active account', () => {
 		expect(accounts.getActiveAccount()).toBeNull()

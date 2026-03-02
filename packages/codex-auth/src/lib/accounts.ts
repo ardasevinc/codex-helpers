@@ -143,6 +143,29 @@ export function importAccounts(
 	return { imported, skipped }
 }
 
+export function deleteAccount(name: string): void {
+	if (!validateName(name)) {
+		throw new Error(
+			`Invalid account name "${name}". Use only letters, numbers, hyphens, and underscores.`,
+		)
+	}
+
+	const path = accountPath(name)
+	if (!existsSync(path)) {
+		throw new Error(`Account "${name}" not found.`)
+	}
+
+	unlinkSync(path)
+
+	const active = getActiveAccount()
+	if (active?.name === name) {
+		const af = activeFile()
+		if (existsSync(af)) {
+			unlinkSync(af)
+		}
+	}
+}
+
 function setActive(name: string): void {
 	const active: ActiveAccount = {
 		name,

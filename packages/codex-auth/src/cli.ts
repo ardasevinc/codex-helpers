@@ -3,9 +3,11 @@
 import { defineCommand, runMain } from 'citty'
 import pkg from '../package.json'
 import { currentCommand } from './commands/current.ts'
+import { deleteCommand } from './commands/delete.ts'
 import { exportCommand } from './commands/export.ts'
 import { importCommand } from './commands/import.ts'
 import { listCommand } from './commands/list.ts'
+import { pruneCommand } from './commands/prune.ts'
 import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
@@ -21,6 +23,8 @@ const main = defineCommand({
 		use: useCommand,
 		list: listCommand,
 		current: currentCommand,
+		delete: deleteCommand,
+		prune: pruneCommand,
 		export: exportCommand,
 		import: importCommand,
 		push: pushCommand,

@@ -3,6 +3,7 @@ import ansis from 'ansis'
 import { defineCommand } from 'citty'
 import { listAccounts } from '../lib/accounts.ts'
 import { formatUsageLine } from '../lib/display.ts'
+import { classifyAccount } from '../lib/expiry.ts'
 import { fetchAllUsage } from '../lib/usage.ts'
 import type { AccountUsage } from '../types.ts'
 
@@ -28,14 +29,26 @@ export const listCommand = defineCommand({
 		for (const acc of accounts) {
 			const marker = acc.isActive ? ansis.green('●') : ansis.dim('○')
 			const label = acc.isActive ? `${acc.name} ${ansis.dim('(active)')}` : acc.name
-			const usage = usageMap.get(acc.name)
+			const result = usageMap.get(acc.name)
 
-			console.log(`  ${marker} ${label}`)
+			if (!result) {
+				console.log(`  ${marker} ${label}`)
+				console.log()
+				continue
+			}
 
-			if (usage instanceof Error) {
-				console.log(`    ${ansis.yellow('⚠')} could not fetch usage (${usage.message})`)
-			} else if (usage) {
-				printUsage(usage)
+			const status = classifyAccount(result)
+
+			if (status.state === 'ok') {
+				const planTag = ansis.dim(`[${status.usage.planType}]`)
+				console.log(`  ${marker} ${label} ${planTag}`)
+				printUsage(status.usage)
+			} else if (status.state === 'expired') {
+				console.log(`  ${marker} ${label}`)
+				console.log(`    ${ansis.red('⚠')} ${status.reason}`)
+			} else {
+				console.log(`  ${marker} ${label}`)
+				console.log(`    ${ansis.yellow('⚠')} could not fetch usage (${status.message})`)
 			}
 			console.log()
 		}

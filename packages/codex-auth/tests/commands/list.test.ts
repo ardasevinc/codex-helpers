@@ -65,7 +65,7 @@ describe('listCommand', () => {
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['personal', usage],
-						['work', new Error('token expired')],
+						['work', new Error('network timeout')],
 					]),
 			),
 		}))
@@ -85,6 +85,112 @@ describe('listCommand', () => {
 		expect(prompts.intro).toHaveBeenCalledWith('Saved accounts')
 		expect(prompts.outro).toHaveBeenCalledWith('2 accounts saved')
 		expect(logs.some((line) => line.includes('personal'))).toBe(true)
-		expect(logs.some((line) => line.includes('could not fetch usage (token expired)'))).toBe(true)
+		expect(logs.some((line) => line.includes('[plus]'))).toBe(true)
+		expect(logs.some((line) => line.includes('could not fetch usage (network timeout)'))).toBe(true)
+	})
+
+	test('shows plan type tag for healthy accounts', async () => {
+		mockPrompts()
+		const logs: string[] = []
+		const originalLog = console.log
+		console.log = mock((...args: unknown[]) => {
+			logs.push(args.map(String).join(' '))
+		}) as typeof console.log
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [{ name: 'pro-acc', auth: {} as never, isActive: false }]),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['pro-acc', { ...sampleUsage(), planType: 'pro' }],
+					]),
+			),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatUsageLine: mock((label: string) => `${label}: line`),
+		}))
+
+		try {
+			const { listCommand } = await importFresh<typeof import('../../src/commands/list.ts')>(
+				'../../src/commands/list.ts',
+			)
+			await runCommand(listCommand, {})
+		} finally {
+			console.log = originalLog
+		}
+
+		expect(logs.some((line) => line.includes('[pro]'))).toBe(true)
+	})
+
+	test('shows expired status for auth errors', async () => {
+		mockPrompts()
+		const logs: string[] = []
+		const originalLog = console.log
+		console.log = mock((...args: unknown[]) => {
+			logs.push(args.map(String).join(' '))
+		}) as typeof console.log
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['dead', new Error('Session expired — re-login with `codex` CLI')],
+					]),
+			),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatUsageLine: mock(() => ''),
+		}))
+
+		try {
+			const { listCommand } = await importFresh<typeof import('../../src/commands/list.ts')>(
+				'../../src/commands/list.ts',
+			)
+			await runCommand(listCommand, {})
+		} finally {
+			console.log = originalLog
+		}
+
+		expect(logs.some((line) => line.includes('session expired'))).toBe(true)
+	})
+
+	test('shows expired status for free plan', async () => {
+		mockPrompts()
+		const logs: string[] = []
+		const originalLog = console.log
+		console.log = mock((...args: unknown[]) => {
+			logs.push(args.map(String).join(' '))
+		}) as typeof console.log
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [{ name: 'lapsed', auth: {} as never, isActive: false }]),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['lapsed', { ...sampleUsage(), planType: 'free' }],
+					]),
+			),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatUsageLine: mock(() => ''),
+		}))
+
+		try {
+			const { listCommand } = await importFresh<typeof import('../../src/commands/list.ts')>(
+				'../../src/commands/list.ts',
+			)
+			await runCommand(listCommand, {})
+		} finally {
+			console.log = originalLog
+		}
+
+		expect(logs.some((line) => line.includes('subscription lapsed (free plan)'))).toBe(true)
 	})
 })
