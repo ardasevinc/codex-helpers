@@ -43,8 +43,10 @@ Commands:
 
 - `codex-auth save <name>` — save current session as a named account
 - `codex-auth use [name]` — switch to a saved account (interactive if no name)
-- `codex-auth list` — list all accounts with usage
+- `codex-auth list` — list all accounts with plan type and usage (expired accounts flagged)
 - `codex-auth current` — show active account and usage
+- `codex-auth delete <name>` — delete a saved account
+- `codex-auth prune` — check all accounts and delete expired ones
 - `codex-auth export` — dump all accounts as JSON to stdout
 - `codex-auth import [--overwrite]` — import accounts from JSON on stdin
 - `codex-auth push <host> [--overwrite]` — push accounts to a remote host via SSH

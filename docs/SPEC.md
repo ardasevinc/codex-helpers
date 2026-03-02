@@ -33,13 +33,17 @@ codex-helpers/
         │   │   ├── use.ts    # `codex-auth use [name]`
         │   │   ├── list.ts   # `codex-auth list`
         │   │   ├── current.ts# `codex-auth current`
+        │   │   ├── delete.ts # `codex-auth delete <name>`
+        │   │   ├── prune.ts  # `codex-auth prune`
         │   │   ├── export.ts # `codex-auth export`
         │   │   ├── import.ts # `codex-auth import`
         │   │   └── push.ts   # `codex-auth push <host>`
         │   ├── lib/
-        │   │   ├── accounts.ts   # account CRUD (snapshot, restore, list)
+        │   │   ├── accounts.ts   # account CRUD (snapshot, restore, list, delete)
         │   │   ├── auth.ts       # auth.json reading, token refresh
         │   │   ├── usage.ts      # usage API fetching & parsing
+        │   │   ├── expiry.ts     # account health classification
+        │   │   ├── display.ts    # progress bars, time formatting
         │   │   └── paths.ts      # path resolution constants
         │   └── types.ts      # shared type definitions
         └── tests/
@@ -47,13 +51,16 @@ codex-helpers/
             ├── accounts.test.ts
             ├── auth.test.ts
             ├── display.test.ts
+            ├── expiry.test.ts
             ├── usage.test.ts
             └── commands/
                 ├── helpers.ts
                 ├── save.test.ts
                 ├── use.test.ts
                 ├── list.test.ts
-                └── current.test.ts
+                ├── current.test.ts
+                ├── delete.test.ts
+                └── prune.test.ts
 ```
 
 ### Tech Stack
@@ -208,35 +215,37 @@ Switch to a saved account.
 
 ### `codex-auth list`
 
-List all saved accounts with usage data.
+List all saved accounts with plan type and usage data. Expired accounts are flagged.
 
 **Behavior:**
 1. Read all `.json` files in `~/.codex/accounts/` (excluding `_active.json`).
 2. Read `_active.json` to determine active account.
 3. Fetch usage for all accounts concurrently (with a spinner).
-4. Display table with usage:
+4. Classify each account's result via `classifyAccount()` (see Account Health Classification).
+5. Display table with usage:
    ```
    ◆ Saved accounts
    │
-   │ ● personal (active)
+   │ ● personal (active) [plus]
    │   5hr: ████████░░ 78%  ·  weekly: ███░░░░░░░ 24%  ·  resets in 1h 23m
    │
-   │ ○ work
+   │ ○ work [plus]
    │   5hr: █░░░░░░░░░  6%  ·  weekly: ██░░░░░░░░ 15%  ·  resets in 3h 42m
    │
-   │ ○ side-project
-   │   5hr: ░░░░░░░░░░  0%  ·  weekly: █░░░░░░░░░  3%  ·  resets in 6d 2h
+   │ ○ old-account
+   │   ⚠ session expired
    │
-   └ 3 accounts saved
+   │ ○ lapsed-account
+   │   ⚠ subscription lapsed (free plan)
+   │
+   └ 4 accounts saved
    ```
-5. If no accounts exist: `"No accounts saved. Run codex-auth save <name> to save your current session."`
+6. If no accounts exist: `"No accounts saved. Run codex-auth save <name> to save your current session."`
 
-**Error handling for usage fetch:**
-- If usage fetch fails for an account (expired token, network error), show the account with a warning instead of usage bars:
-  ```
-  │ ○ old-account
-  │   ⚠ could not fetch usage (token expired)
-  ```
+**Account status display:**
+- **Healthy accounts**: show plan type tag (e.g. `[plus]`, `[pro]`) and usage bars
+- **Expired accounts** (auth errors, token revoked, free plan): red `⚠` with reason
+- **Unknown errors** (network timeout, etc.): yellow `⚠ could not fetch usage (...)`
 
 ### `codex-auth current`
 
@@ -258,6 +267,56 @@ Show the currently active account and its usage.
    ```
    │ credits: $5.39 remaining
    ```
+
+### `codex-auth delete <name>`
+
+Delete a saved account.
+
+**Args:**
+- `name` (required, positional): Account name to delete.
+
+**Behavior:**
+1. Validate `name` format.
+2. Check account exists. Error if not.
+3. If account is currently active, mention this in the confirmation prompt.
+4. Prompt for confirmation via clack confirm.
+5. Remove `~/.codex/accounts/<name>.json`.
+6. If deleted account was active, remove `_active.json` (no active account state).
+7. Display success.
+
+**Output:**
+```
+◆ Deleted "personal"
+│ Removed ~/.codex/accounts/personal.json
+│ No active account — run `codex-auth use` to select one.
+└
+```
+
+### `codex-auth prune`
+
+Check all accounts for expiry and delete expired ones after confirmation.
+
+**Behavior:**
+1. List all accounts. If none, show info and exit.
+2. Fetch usage for all accounts concurrently (with a spinner).
+3. Classify results via `findExpired()` (see Account Health Classification).
+4. If no expired accounts: `"All accounts are healthy. Nothing to prune."`
+5. Display expired accounts with reasons:
+   ```
+   ◆ Found 2 expired accounts
+   │ ✕ old-account — session expired
+   │ ✕ lapsed-account — subscription lapsed (free plan)
+   ```
+6. Prompt for confirmation.
+7. Delete all expired accounts, track successes and failures.
+8. Report results.
+
+**Output:**
+```
+◆ 2 pruned, 0 failed
+│ Deleted: old-account, lapsed-account
+└
+```
 
 ### `codex-auth export`
 
@@ -416,6 +475,37 @@ grant_type=refresh_token
 
 ---
 
+## Account Health Classification
+
+The `expiry.ts` module provides a pure, dependency-free classification of account health. Used by `list` and `prune` commands.
+
+### Heuristics
+
+An account is classified as **expired** if any of the following are true:
+- Usage fetch fails with an auth error (HTTP 401/403)
+- Token refresh fails with `refresh_token_expired`, `refresh_token_reused`, or `refresh_token_invalidated`
+- Usage fetch succeeds but `plan_type` is `"free"` (subscription lapsed, reverted to free tier)
+
+An account is classified as **error** (not expired) if:
+- Usage fetch fails with a non-auth error (network timeout, server 500, etc.)
+
+These transient errors are not treated as expiry to avoid false positives.
+
+### Error Pattern Matching
+
+Classification uses string pattern matching against error messages rather than `instanceof` checks. This keeps the module free of imports from other lib files and trivially testable. The matched patterns correspond to stable error messages from `auth.ts` and `usage.ts`:
+
+| Pattern | Reason |
+| --- | --- |
+| `"Session expired"` | session expired |
+| `"Token revoked"` | token revoked |
+| `"Token conflict"` | token conflict |
+| `"Auth failed"` | auth failed |
+| `"Token refresh failed"` | token refresh failed |
+| `planType === "free"` | subscription lapsed (free plan) |
+
+---
+
 ## Type Definitions
 
 ```typescript
@@ -443,6 +533,12 @@ interface Account {
   auth: CodexAuth;
   isActive: boolean;
 }
+
+// Account health classification (from expiry.ts)
+type AccountStatus =
+  | { state: 'ok'; usage: AccountUsage }
+  | { state: 'expired'; reason: string }
+  | { state: 'error'; message: string };
 
 // Parsed usage for display
 interface AccountUsage {
@@ -500,11 +596,14 @@ Format `reset_at` relative to now:
 | No accounts saved | Friendly message, suggest `codex-auth save` |
 | Account name invalid | Error with allowed character pattern |
 | Account not found | Error listing available accounts |
-| Usage API unreachable | Show account without usage, warn |
-| Token expired | Attempt refresh, if fails show "token expired" inline |
-| Token refresh fails | Show specific error, suggest re-login |
+| Usage API unreachable | Show account with yellow warning (transient error) |
+| Token expired / revoked | Classify as expired, show red warning with reason |
+| Token refresh fails (auth) | Classify as expired, show red warning with reason |
+| Plan downgraded to free | Classify as expired (subscription lapsed) |
 | accounts dir doesn't exist | Create it automatically |
-| Concurrent usage fetches fail partially | Show successful ones, warn on failed ones |
+| Concurrent usage fetches fail partially | Show successful ones, classify failed ones |
+| Delete active account | Remove snapshot and clear `_active.json` |
+| Prune with no expired accounts | Friendly message, no action taken |
 
 ---
 
@@ -529,6 +628,28 @@ All tests use `bun:test`. Tests should mock filesystem and network operations �
 - handles old symlink migration (unlink then copy)
 - copies snapshot to auth.json as a regular file
 - updates _active.json on switch
+- deletes account snapshot file
+- clears _active.json when deleting active account
+- preserves _active.json when deleting non-active account
+- rejects delete with invalid name
+- rejects delete of nonexistent account
+- deleted account no longer appears in listAccounts
+```
+
+#### `tests/expiry.test.ts` — Account Health Classification
+
+```
+- returns ok for paid plan usage (plus, pro)
+- returns expired for free plan (subscription lapsed)
+- returns expired for session expired error
+- returns expired for token revoked error
+- returns expired for token conflict error
+- returns expired for auth failed error
+- returns expired for token refresh failed error
+- returns error for unknown errors (network, etc.)
+- findExpired returns only expired entries from mixed map
+- findExpired returns empty map when all healthy
+- findExpired returns all when all expired
 ```
 
 #### `tests/auth.test.ts` — Auth & Token Refresh
@@ -601,6 +722,28 @@ All tests use `bun:test`. Tests should mock filesystem and network operations �
 - shows message when no accounts exist
 - handles usage fetch failures per-account
 - sorts accounts alphabetically
+- shows plan type tag for healthy accounts
+- shows expired status for auth errors
+- shows expired status for free plan (subscription lapsed)
+```
+
+#### `tests/commands/delete.test.ts`
+
+```
+- deletes account after confirmation
+- errors on invalid name
+- errors when account not found
+- exits when user cancels confirmation
+- mentions active status in confirm message
+```
+
+#### `tests/commands/prune.test.ts`
+
+```
+- shows info when no accounts saved
+- shows info when all accounts healthy
+- deletes expired accounts after confirmation
+- cancels when user declines
 ```
 
 #### `tests/commands/current.test.ts`
@@ -651,7 +794,6 @@ Create a `tests/helpers.ts` with:
 
 - Auto-rotation: detect rate limit hit, auto-switch to least-loaded account
 - macOS keychain support for auth reading
-- `codex-auth remove <name>` command
 - `codex-auth rename <old> <new>` command
 - Shell completions
 - Integration with codex CLI as a wrapper/plugin
