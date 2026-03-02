@@ -501,7 +501,6 @@ Classification uses string pattern matching against error messages rather than `
 | `"Token revoked"` | token revoked |
 | `"Token conflict"` | token conflict |
 | `"Auth failed"` | auth failed |
-| `"Token refresh failed"` | token refresh failed |
 | `planType === "free"` | subscription lapsed (free plan) |
 
 ---

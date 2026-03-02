@@ -49,9 +49,9 @@ describe('classifyAccount', () => {
 		expect(result).toEqual({ state: 'expired', reason: 'auth failed' })
 	})
 
-	test('returns expired for token refresh failed error', () => {
+	test('returns error for unknown token refresh failure', () => {
 		const result = classifyAccount(new Error('Token refresh failed: unknown'))
-		expect(result).toEqual({ state: 'expired', reason: 'token refresh failed' })
+		expect(result).toEqual({ state: 'error', message: 'Token refresh failed: unknown' })
 	})
 
 	test('returns error for unknown errors', () => {

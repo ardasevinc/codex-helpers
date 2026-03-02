@@ -11,7 +11,6 @@ const EXPIRED_PATTERNS = [
 	'Token revoked',
 	'Token conflict',
 	'Auth failed',
-	'Token refresh failed',
 ] as const
 
 /** Classify an account's usage result into a health status */
@@ -36,8 +35,7 @@ function deriveReason(message: string): string {
 	if (message.includes('Session expired')) return 'session expired'
 	if (message.includes('Token revoked')) return 'token revoked'
 	if (message.includes('Token conflict')) return 'token conflict'
-	if (message.includes('Auth failed')) return 'auth failed'
-	return 'token refresh failed'
+	return 'auth failed'
 }
 
 /** Filter a usage map down to only expired accounts */

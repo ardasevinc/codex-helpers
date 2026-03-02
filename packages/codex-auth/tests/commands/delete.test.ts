@@ -127,8 +127,8 @@ describe('deleteCommand', () => {
 		)
 
 		await runCommand(deleteCommand, { args: { name: 'personal' } })
-
-		const confirmCall = prompts.confirm.mock.calls[0]
-		expect(confirmCall[0].message).toContain('currently active')
+		expect(prompts.confirm).toHaveBeenCalledWith(
+			expect.objectContaining({ message: expect.stringContaining('currently active') }),
+		)
 	})
 })
