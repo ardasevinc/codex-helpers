@@ -171,6 +171,39 @@ describe('exportAccounts', () => {
 })
 
 describe('importAccounts', () => {
+	test('accepts export-style account maps', () => {
+		const data = {
+			main: mockAuth(),
+			alt: mockAuth({
+				tokens: { ...mockAuth().tokens, access_token: 'alt-token' },
+			}),
+		}
+
+		expect(accounts.validateImportData(data)).toEqual(data)
+	})
+
+	test('rejects a single raw auth.json payload', () => {
+		const rawAuth = {
+			auth_mode: 'chatgpt',
+			...mockAuth(),
+		}
+
+		expect(() => accounts.validateImportData(rawAuth)).toThrow('single auth.json payload')
+	})
+
+	test('rejects invalid auth entries before import', () => {
+		expect(() =>
+			accounts.validateImportData({
+				valid: mockAuth(),
+				broken: {
+					OPENAI_API_KEY: null,
+					tokens: { access_token: 'x' },
+					last_refresh: new Date().toISOString(),
+				},
+			}),
+		).toThrow('Invalid auth data for account "broken".')
+	})
+
 	test('creates snapshot files for each entry', () => {
 		const data = {
 			main: mockAuth(),

@@ -48,7 +48,7 @@ Commands:
 - `codex-auth delete <name>` — delete a saved account
 - `codex-auth prune` — check all accounts and delete expired ones
 - `codex-auth export` — dump all accounts as JSON to stdout
-- `codex-auth import [--overwrite]` — import accounts from JSON on stdin
+- `codex-auth import [--overwrite]` — import `codex-auth export` JSON from stdin
 - `codex-auth push <host> [--overwrite]` — push accounts to a remote host via SSH
 
 Multi-machine sync:

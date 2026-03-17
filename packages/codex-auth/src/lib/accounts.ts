@@ -13,6 +13,50 @@ import { dirname, join } from 'node:path'
 import type { Account, ActiveAccount, CodexAuth } from '../types.ts'
 import { accountPath, accountsDir, activeFile, defaultAuthPath, validateName } from './paths.ts'
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function isCodexAuth(value: unknown): value is CodexAuth {
+	if (!isRecord(value)) return false
+	if (!('OPENAI_API_KEY' in value)) return false
+	if (!('tokens' in value)) return false
+	if (!('last_refresh' in value)) return false
+
+	if (value.OPENAI_API_KEY !== null && typeof value.OPENAI_API_KEY !== 'string') {
+		return false
+	}
+	if (typeof value.last_refresh !== 'string') return false
+	if (!isRecord(value.tokens)) return false
+
+	return (
+		typeof value.tokens.access_token === 'string' &&
+		typeof value.tokens.refresh_token === 'string' &&
+		typeof value.tokens.id_token === 'string' &&
+		(value.tokens.account_id === undefined || typeof value.tokens.account_id === 'string')
+	)
+}
+
+export function validateImportData(data: unknown): Record<string, CodexAuth> {
+	if (!isRecord(data)) {
+		throw new Error('Expected a JSON object mapping account names to auth data.')
+	}
+
+	if (isCodexAuth(data)) {
+		throw new Error(
+			'Received a single auth.json payload. `codex-auth import` expects `codex-auth export` output mapping account names to auth data.',
+		)
+	}
+
+	for (const [name, auth] of Object.entries(data)) {
+		if (!isCodexAuth(auth)) {
+			throw new Error(`Invalid auth data for account "${name}".`)
+		}
+	}
+
+	return data as Record<string, CodexAuth>
+}
+
 export function ensureAccountsDir(): void {
 	const dir = accountsDir()
 	if (!existsSync(dir)) {

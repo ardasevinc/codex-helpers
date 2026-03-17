@@ -347,8 +347,9 @@ Import accounts from JSON on stdin.
 **Behavior:**
 1. Read JSON from stdin (e.g. piped from `codex-auth export`).
 2. Validate the input is a JSON object mapping names to `CodexAuth` data.
-3. For each entry: validate the name, skip if account exists (unless `--overwrite`), write snapshot.
-4. Report results: how many imported, how many skipped.
+3. Reject a single raw `auth.json` payload with a clear error instructing the user to provide `codex-auth export` output instead.
+4. For each entry: validate the name, skip if account exists (unless `--overwrite`), write snapshot.
+5. Report results: how many imported, how many skipped.
 
 **Usage:**
 ```bash

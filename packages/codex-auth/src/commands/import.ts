@@ -1,7 +1,18 @@
 import * as p from '@clack/prompts'
 import { defineCommand } from 'citty'
-import { importAccounts } from '../lib/accounts.ts'
+import { importAccounts, validateImportData } from '../lib/accounts.ts'
 import type { CodexAuth } from '../types.ts'
+
+export function parseImportInput(input: string): Record<string, CodexAuth> {
+	let data: unknown
+	try {
+		data = JSON.parse(input)
+	} catch {
+		throw new Error('Invalid JSON input.')
+	}
+
+	return validateImportData(data)
+}
 
 export const importCommand = defineCommand({
 	meta: {
@@ -22,29 +33,22 @@ export const importCommand = defineCommand({
 			process.exit(1)
 		}
 
-		let data: Record<string, CodexAuth>
 		try {
-			data = JSON.parse(input)
-		} catch {
-			p.cancel('Invalid JSON input.')
+			const data = parseImportInput(input)
+			const { imported, skipped } = importAccounts(data, args.overwrite)
+
+			const lines: string[] = []
+			if (imported.length > 0) {
+				lines.push(`Imported: ${imported.join(', ')}`)
+			}
+			if (skipped.length > 0) {
+				lines.push(`Skipped: ${skipped.join(', ')}`)
+			}
+
+			p.note(lines.join('\n'), `${imported.length} imported, ${skipped.length} skipped`)
+		} catch (err) {
+			p.cancel(err instanceof Error ? err.message : String(err))
 			process.exit(1)
 		}
-
-		if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-			p.cancel('Expected a JSON object mapping account names to auth data.')
-			process.exit(1)
-		}
-
-		const { imported, skipped } = importAccounts(data, args.overwrite)
-
-		const lines: string[] = []
-		if (imported.length > 0) {
-			lines.push(`Imported: ${imported.join(', ')}`)
-		}
-		if (skipped.length > 0) {
-			lines.push(`Skipped: ${skipped.join(', ')}`)
-		}
-
-		p.note(lines.join('\n'), `${imported.length} imported, ${skipped.length} skipped`)
 	},
 })
