@@ -50,6 +50,7 @@ Commands:
 - `codex-auth export` — dump all accounts as JSON to stdout
 - `codex-auth import [--overwrite]` — import `codex-auth export` JSON from stdin
 - `codex-auth push <host> [--overwrite]` — push accounts to a remote host via SSH
+- `codex-auth -v` / `codex-auth -V` — print the current version
 
 Multi-machine sync:
 

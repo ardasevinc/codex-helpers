@@ -391,6 +391,10 @@ codex-auth push user@192.168.1.10 --overwrite
 
 Running bare `codex-auth` with no arguments should behave the same as `codex-auth use` (interactive mode). This is the primary UX entrypoint.
 
+### Version Shortcuts
+
+Running `codex-auth -v` or `codex-auth -V` should print the package version to stdout and exit successfully.
+
 ---
 
 ## Usage API
