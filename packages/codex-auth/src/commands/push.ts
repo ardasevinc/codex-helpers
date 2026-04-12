@@ -1,6 +1,6 @@
-import * as p from '@clack/prompts'
 import { defineCommand } from 'citty'
 import { exportAccounts } from '../lib/accounts.ts'
+import { createSpinner, fail, printJson, printNote, resolveOutputMode } from '../lib/output.ts'
 
 export const pushCommand = defineCommand({
 	meta: {
@@ -18,17 +18,22 @@ export const pushCommand = defineCommand({
 			description: 'Overwrite existing accounts on remote',
 			default: false,
 		},
+		json: {
+			type: 'boolean',
+			description: 'Emit machine-readable JSON output',
+			default: false,
+		},
 	},
 	async run({ args }) {
+		const mode = resolveOutputMode(args)
 		const data = exportAccounts()
 		const names = Object.keys(data)
 
 		if (names.length === 0) {
-			p.cancel('No accounts to push.')
-			process.exit(1)
+			fail(mode, 'No accounts to push.')
 		}
 
-		const s = p.spinner()
+		const s = createSpinner(mode)
 		s.start(`Pushing ${names.length} account(s) to ${args.host}...`)
 
 		// Ensure remote accounts dir exists
@@ -40,8 +45,7 @@ export const pushCommand = defineCommand({
 		if (mkdirExit !== 0) {
 			const err = await new Response(mkdirProc.stderr).text()
 			s.stop('Failed')
-			p.cancel(`SSH connection failed: ${err.trim()}`)
-			process.exit(1)
+			fail(mode, `SSH connection failed: ${err.trim()}`)
 		}
 
 		const pushed: string[] = []
@@ -84,7 +88,28 @@ export const pushCommand = defineCommand({
 		if (skipped.length > 0) lines.push(`Skipped (exists): ${skipped.join(', ')}`)
 		if (failed.length > 0) lines.push(`Failed: ${failed.join(', ')}`)
 
-		p.note(lines.join('\n'), `${args.host}: ${pushed.length} pushed, ${skipped.length} skipped`)
+		if (mode.json) {
+			printJson({
+				ok: failed.length === 0,
+				host: args.host,
+				pushed,
+				skipped,
+				failed,
+				counts: {
+					pushed: pushed.length,
+					skipped: skipped.length,
+					failed: failed.length,
+				},
+			})
+			if (failed.length > 0) process.exit(1)
+			return
+		}
+
+		printNote(
+			mode,
+			lines.join('\n'),
+			`${args.host}: ${pushed.length} pushed, ${skipped.length} skipped`,
+		)
 
 		if (failed.length > 0) process.exit(1)
 	},

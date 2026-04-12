@@ -3,6 +3,16 @@ import ansis from 'ansis'
 import { defineCommand } from 'citty'
 import { deleteAccount, listAccounts } from '../lib/accounts.ts'
 import { findExpired } from '../lib/expiry.ts'
+import {
+	createSpinner,
+	fail,
+	printInfo,
+	printIntro,
+	printJson,
+	printNote,
+	requireFlagInNonInteractiveMode,
+	resolveOutputMode,
+} from '../lib/output.ts'
 import { fetchAllUsage } from '../lib/usage.ts'
 
 export const pruneCommand = defineCommand({
@@ -10,14 +20,32 @@ export const pruneCommand = defineCommand({
 		name: 'prune',
 		description: 'Check all accounts and delete expired ones',
 	},
-	async run() {
+	args: {
+		yes: {
+			type: 'boolean',
+			description: 'Delete expired accounts without prompting',
+			default: false,
+		},
+		json: {
+			type: 'boolean',
+			description: 'Emit machine-readable JSON output',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const mode = resolveOutputMode(args)
+		const yes = Boolean(args?.yes)
 		const accounts = listAccounts()
 		if (accounts.length === 0) {
-			p.log.info('No accounts saved.')
+			if (mode.json) {
+				printJson({ ok: true, total: 0, expired: [], deleted: [], failed: [] })
+				return
+			}
+			printInfo(mode, 'No accounts saved.')
 			return
 		}
 
-		const s = p.spinner()
+		const s = createSpinner(mode)
 		s.start('Checking all accounts...')
 		const usageMap = await fetchAllUsage(accounts)
 		s.stop('Done')
@@ -25,22 +53,53 @@ export const pruneCommand = defineCommand({
 		const expired = findExpired(usageMap)
 
 		if (expired.size === 0) {
-			p.log.info('All accounts are healthy. Nothing to prune.')
+			if (mode.json) {
+				printJson({
+					ok: true,
+					total: accounts.length,
+					expired: [],
+					deleted: [],
+					failed: [],
+				})
+				return
+			}
+			printInfo(mode, 'All accounts are healthy. Nothing to prune.')
 			return
 		}
 
-		p.intro(`Found ${expired.size} expired account${expired.size === 1 ? '' : 's'}`)
-		for (const [name, reason] of expired) {
-			console.log(`  ${ansis.red('✕')} ${name} — ${reason}`)
-		}
-		console.log()
+		const expiredItems = Array.from(expired, ([name, reason]) => ({ name, reason }))
 
-		const confirmed = await p.confirm({
-			message: `Delete ${expired.size} expired account${expired.size === 1 ? '' : 's'}?`,
-		})
-		if (p.isCancel(confirmed) || !confirmed) {
-			p.cancel('Cancelled.')
-			process.exit(0)
+		if (mode.json) {
+			requireFlagInNonInteractiveMode(
+				mode,
+				yes,
+				'--yes',
+				`Pruning ${expired.size} expired account${expired.size === 1 ? '' : 's'}`,
+			)
+		} else {
+			printIntro(mode, `Found ${expired.size} expired account${expired.size === 1 ? '' : 's'}`)
+			for (const { name, reason } of expiredItems) {
+				console.log(`  ${ansis.red('✕')} ${name} — ${reason}`)
+			}
+			console.log()
+		}
+
+		if (!yes) {
+			if (mode.interactive) {
+				const confirmed = await p.confirm({
+					message: `Delete ${expired.size} expired account${expired.size === 1 ? '' : 's'}?`,
+				})
+				if (p.isCancel(confirmed) || !confirmed) {
+					fail(mode, 'Cancelled.', 0)
+				}
+			} else {
+				requireFlagInNonInteractiveMode(
+					mode,
+					yes,
+					'--yes',
+					`Pruning ${expired.size} expired account${expired.size === 1 ? '' : 's'}`,
+				)
+			}
 		}
 
 		const deleted: string[] = []
@@ -63,6 +122,20 @@ export const pruneCommand = defineCommand({
 			lines.push(`Failed: ${failed.join(', ')}`)
 		}
 
-		p.note(lines.join('\n'), `${deleted.length} pruned, ${failed.length} failed`)
+		if (mode.json) {
+			printJson({
+				ok: failed.length === 0,
+				total: accounts.length,
+				expired: expiredItems,
+				deleted,
+				failed,
+			})
+			if (failed.length > 0) {
+				process.exit(1)
+			}
+			return
+		}
+
+		printNote(mode, lines.join('\n'), `${deleted.length} pruned, ${failed.length} failed`)
 	},
 })

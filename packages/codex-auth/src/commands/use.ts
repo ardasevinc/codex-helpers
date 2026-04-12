@@ -2,6 +2,15 @@ import * as p from '@clack/prompts'
 import { defineCommand } from 'citty'
 import { listAccounts, switchAccount } from '../lib/accounts.ts'
 import { formatAccountUsage, formatUsageCompact } from '../lib/display.ts'
+import {
+	createSpinner,
+	fail,
+	printJson,
+	printNote,
+	requireInteractive,
+	resolveOutputMode,
+	serializeUsage,
+} from '../lib/output.ts'
 import { fetchAllUsage, fetchUsageForAccount } from '../lib/usage.ts'
 import type { AccountUsage } from '../types.ts'
 
@@ -16,47 +25,66 @@ export const useCommand = defineCommand({
 			description: 'Account name (interactive if omitted)',
 			required: false,
 		},
+		json: {
+			type: 'boolean',
+			description: 'Emit machine-readable JSON output',
+			default: false,
+		},
 	},
 	async run({ args }) {
+		const mode = resolveOutputMode(args)
 		if (args.name) {
-			await switchNamed(args.name)
+			await switchNamed(args.name, mode)
 		} else {
-			await switchInteractive()
+			requireInteractive(
+				mode,
+				'Interactive account selection is disabled in non-interactive mode. Pass an account name.',
+			)
+			await switchInteractive(mode)
 		}
 	},
 })
 
-async function switchNamed(name: string) {
-	const s = p.spinner()
+async function switchNamed(name: string, mode: ReturnType<typeof resolveOutputMode>) {
+	const s = createSpinner(mode)
 	s.start('Fetching usage...')
 
 	let usage: AccountUsage | null = null
+	let usageError: string | null = null
 	try {
 		usage = await fetchUsageForAccount(name)
-	} catch {
-		// proceed without usage
+	} catch (err) {
+		usageError = err instanceof Error ? err.message : String(err)
 	}
 	s.stop('Usage fetched')
 
 	try {
 		switchAccount(name)
 	} catch (err) {
-		p.cancel(`Failed to switch: ${err instanceof Error ? err.message : err}`)
-		process.exit(1)
+		fail(mode, `Failed to switch: ${err instanceof Error ? err.message : err}`)
+	}
+
+	if (mode.json) {
+		printJson({
+			ok: true,
+			switchedTo: name,
+			usage: usage ? serializeUsage(usage) : null,
+			usageError,
+		})
+		return
 	}
 
 	const lines = usage ? formatAccountUsage(usage) : ['Could not fetch usage data']
-	p.note(lines.join('\n'), `Switched to "${name}"`)
+	printNote(mode, lines.join('\n'), `Switched to "${name}"`)
 }
 
-async function switchInteractive() {
+async function switchInteractive(mode: ReturnType<typeof resolveOutputMode>) {
 	const accounts = listAccounts()
 	if (accounts.length === 0) {
-		p.cancel('No accounts saved. Run `codex-auth save <name>` to save your current session.')
-		process.exit(1)
+		fail(mode, 'No accounts saved. Run `codex-auth save <name>` to save your current session.')
 	}
 
-	const s = p.spinner()
+	const s = createSpinner(mode)
 	s.start('Fetching usage for all accounts...')
 	const usageMap = await fetchAllUsage(accounts)
 	s.stop('Usage fetched')
@@ -84,24 +112,22 @@ async function switchInteractive() {
 	})
 
 	if (p.isCancel(selected)) {
-		p.cancel('Cancelled.')
-		process.exit(0)
+		fail(mode, 'Cancelled.', 0)
 	}
 
 	try {
 		switchAccount(selected)
 	} catch (err) {
-		p.cancel(`Failed to switch: ${err instanceof Error ? err.message : err}`)
-		process.exit(1)
+		fail(mode, `Failed to switch: ${err instanceof Error ? err.message : err}`)
 	}
 
 	const usage = usageMap.get(selected)
 	const lines =
 		usage && !(usage instanceof Error) ? formatAccountUsage(usage) : ['Could not fetch usage data']
-	p.note(lines.join('\n'), `Switched to "${selected}"`)
+	printNote(mode, lines.join('\n'), `Switched to "${selected}"`)
 }
 
 /** Run the interactive use flow — exported for default command */
 export async function runUseInteractive() {
-	await switchInteractive()
+	await switchInteractive(resolveOutputMode())
 }

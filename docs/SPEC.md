@@ -150,18 +150,34 @@ Rationale: symlinks are transparent to writes. If `auth.json` points to a snapsh
 
 ## Commands
 
+### Output Modes
+
+- Commands that support `--json` should emit machine-readable JSON to stdout and must not prompt.
+- Interactive prompts are allowed only when not in JSON mode and not running under an AI agent.
+- AI agent detection should use the `is-ai-agent` package.
+- When an AI agent is detected, commands must switch to non-interactive behavior automatically.
+- In non-interactive mode:
+  - `save` requires `--overwrite` to replace an existing account
+  - `delete` requires `--yes`
+  - `prune` requires `--yes`
+  - `use` without a name is invalid and should error instead of opening a selector
+
 ### `codex-auth save <name>`
 
 Snapshot the current `auth.json` as a named account.
 
 **Args:**
 - `name` (required, positional): Account name. Must match `/^[a-zA-Z0-9_-]+$/`.
+- `--overwrite` (optional): Overwrite an existing saved account without prompting.
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Validate `name` format.
 2. Resolve auth.json path (see resolution order above).
 3. If auth.json doesn't exist, error: `"No auth.json found. Log in with codex first."`
-4. If account `name` already exists, prompt for overwrite confirmation via clack confirm.
+4. If account `name` already exists:
+   - interactive mode: prompt for overwrite confirmation via clack confirm
+   - non-interactive mode: require `--overwrite`
 5. Copy auth.json contents to `~/.codex/accounts/<name>.json`.
 6. Set `_active.json` to this account name.
 7. Replace `~/.codex/auth.json` with a regular-file copy of the new snapshot (unlink old symlink first, if present).
@@ -180,6 +196,7 @@ Switch to a saved account.
 
 **Args:**
 - `name` (optional, positional): Account to switch to.
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior (with name):**
 1. Check account exists in `~/.codex/accounts/<name>.json`. Error if not.
@@ -205,6 +222,9 @@ Switch to a saved account.
    ```
 4. On selection, switch (same as named flow from step 2).
 
+**Behavior (without name — non-interactive):**
+1. Error with a clear message instructing the caller to pass an account name explicitly.
+
 **Output (after switch):**
 ```
 ◆ Switched to "work"
@@ -216,6 +236,9 @@ Switch to a saved account.
 ### `codex-auth list`
 
 List all saved accounts with plan type and usage data. Expired accounts are flagged.
+
+**Args:**
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Read all `.json` files in `~/.codex/accounts/` (excluding `_active.json`).
@@ -251,6 +274,9 @@ List all saved accounts with plan type and usage data. Expired accounts are flag
 
 Show the currently active account and its usage.
 
+**Args:**
+- `--json` (optional): Emit machine-readable JSON output.
+
 **Behavior:**
 1. Read `_active.json`. If not found, print `"No active account. Run codex-auth use to select one."` and exit.
 2. Verify the active account's snapshot file still exists.
@@ -274,12 +300,16 @@ Delete a saved account.
 
 **Args:**
 - `name` (required, positional): Account name to delete.
+- `--yes` (optional): Delete without prompting.
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Validate `name` format.
 2. Check account exists. Error if not.
 3. If account is currently active, mention this in the confirmation prompt.
-4. Prompt for confirmation via clack confirm.
+4. Confirm deletion:
+   - interactive mode: prompt via clack confirm
+   - non-interactive mode: require `--yes`
 5. Remove `~/.codex/accounts/<name>.json`.
 6. If deleted account was active, remove `_active.json` (no active account state).
 7. Display success.
@@ -296,6 +326,10 @@ Delete a saved account.
 
 Check all accounts for expiry and delete expired ones after confirmation.
 
+**Args:**
+- `--yes` (optional): Delete expired accounts without prompting.
+- `--json` (optional): Emit machine-readable JSON output.
+
 **Behavior:**
 1. List all accounts. If none, show info and exit.
 2. Fetch usage for all accounts concurrently (with a spinner).
@@ -307,7 +341,9 @@ Check all accounts for expiry and delete expired ones after confirmation.
    │ ✕ old-account — session expired
    │ ✕ lapsed-account — subscription lapsed (free plan)
    ```
-6. Prompt for confirmation.
+6. Confirm deletion:
+   - interactive mode: prompt for confirmation
+   - non-interactive mode: require `--yes`
 7. Delete all expired accounts, track successes and failures.
 8. Report results.
 
@@ -343,6 +379,7 @@ Import accounts from JSON on stdin.
 
 **Args:**
 - `--overwrite` (optional): Replace existing accounts. Without this flag, existing accounts are skipped.
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Read JSON from stdin (e.g. piped from `codex-auth export`).
@@ -367,6 +404,7 @@ Push all accounts to a remote host via SSH. Does not require `codex-auth` to be 
 **Args:**
 - `host` (required, positional): SSH host (e.g. `user@vps`, `vps-alias`).
 - `--overwrite` (optional): Replace existing accounts on remote.
+- `--json` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Export all local accounts.
@@ -390,6 +428,8 @@ codex-auth push user@192.168.1.10 --overwrite
 ### Default Command (no subcommand)
 
 Running bare `codex-auth` with no arguments should behave the same as `codex-auth use` (interactive mode). This is the primary UX entrypoint.
+
+When JSON mode is enabled or an AI agent is detected, the default command should not enter interactive account selection and should instead instruct the caller to use an explicit subcommand.
 
 ### Version Shortcuts
 

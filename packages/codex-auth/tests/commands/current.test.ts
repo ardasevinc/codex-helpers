@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import type { AccountUsage } from '../../src/types.ts'
-import { importFresh, mockPrompts, runCommand } from './helpers.ts'
+import { captureConsole, importFresh, mockAgent, mockPrompts, runCommand } from './helpers.ts'
 
 afterEach(() => {
 	mock.restore()
@@ -104,5 +104,43 @@ describe('currentCommand', () => {
 		expect(body).toContain('plan:')
 		expect(body).toContain('plus')
 		expect(body).toContain('5hr line')
+	})
+
+	test('emits JSON output for the active account', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const usage = sampleUsage()
+		const consoleCapture = captureConsole()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			getActiveAccount: mock(() => ({ name: 'personal', switched_at: '2026-04-12T10:00:00.000Z' })),
+			accountExists: mock((_name: string) => true),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: mock(async (_name: string) => usage),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatAccountUsage: mock(() => ['unused']),
+		}))
+
+		try {
+			const { currentCommand } = await importFresh<typeof import('../../src/commands/current.ts')>(
+				'../../src/commands/current.ts',
+			)
+			await runCommand(currentCommand, { args: { json: true } })
+		} finally {
+			consoleCapture.restore()
+		}
+
+		const payload = JSON.parse(consoleCapture.logs.at(-1) ?? '{}') as {
+			ok: boolean
+			status: string
+			active: { name: string; switchedAt: string; snapshotExists: boolean }
+			usage: { planType: string }
+		}
+		expect(payload.ok).toBe(true)
+		expect(payload.status).toBe('ok')
+		expect(payload.active.name).toBe('personal')
+		expect(payload.usage.planType).toBe('plus')
 	})
 })

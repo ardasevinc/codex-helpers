@@ -57,6 +57,9 @@ export function mockPrompts(overrides?: {
 		}),
 		isCancel: (value: unknown) => value === cancelToken,
 	}))
+	mock.module('is-ai-agent', () => ({
+		isAgent: mock(() => null),
+	}))
 
 	return {
 		cancelToken,
@@ -70,6 +73,46 @@ export function mockPrompts(overrides?: {
 		warn,
 		spinnerStart,
 		spinnerStop,
+	}
+}
+
+export function mockAgent(agent: 'claude' | 'gemini' | 'codex' | 'opencode' | null = null) {
+	const isAgent = mock(() => agent)
+
+	mock.module('is-ai-agent', () => ({
+		isAgent,
+	}))
+
+	return { isAgent }
+}
+
+export function captureConsole() {
+	const originalLog = console.log
+	const originalWarn = console.warn
+	const originalError = console.error
+	const logs: string[] = []
+	const warns: string[] = []
+	const errors: string[] = []
+
+	console.log = mock((...args: unknown[]) => {
+		logs.push(args.map(String).join(' '))
+	}) as typeof console.log
+	console.warn = mock((...args: unknown[]) => {
+		warns.push(args.map(String).join(' '))
+	}) as typeof console.warn
+	console.error = mock((...args: unknown[]) => {
+		errors.push(args.map(String).join(' '))
+	}) as typeof console.error
+
+	return {
+		logs,
+		warns,
+		errors,
+		restore: () => {
+			console.log = originalLog
+			console.warn = originalWarn
+			console.error = originalError
+		},
 	}
 }
 

@@ -14,7 +14,7 @@
     },
     "packages/codex-auth": {
       "name": "codex-auth",
-      "version": "0.1.0",
+      "version": "0.3.2",
       "bin": {
         "codex-auth": "./src/cli.ts",
       },
@@ -22,6 +22,7 @@
         "@clack/prompts": "^1.0.1",
         "ansis": "^4.2.0",
         "citty": "^0.2.1",
+        "is-ai-agent": "^0.1.0",
       },
     },
   },
@@ -59,6 +60,8 @@
     "citty": ["citty@0.2.1", "", {}, "sha512-kEV95lFBhQgtogAPlQfJJ0WGVSokvLr/UEoFPiKKOXF7pl98HfUVUD0ejsuTCld/9xH9vogSywZ5KqHzXrZpqg=="],
 
     "codex-auth": ["codex-auth@workspace:packages/codex-auth"],
+
+    "is-ai-agent": ["is-ai-agent@0.1.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-Qo2fUHEm3TF3z95mcLDyei/vdmyxgsuWmn5vt5gw2C8ClintP8NmHuSg0ujcnxvo6l9SELi10xR4X2yEWJzkZQ=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 

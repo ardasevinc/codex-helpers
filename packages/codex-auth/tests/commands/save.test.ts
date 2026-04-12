@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
-import { ExitError, importFresh, mockPrompts, runCommand, stubProcessExit } from './helpers.ts'
+import {
+	captureConsole,
+	ExitError,
+	importFresh,
+	mockAgent,
+	mockPrompts,
+	runCommand,
+	stubProcessExit,
+} from './helpers.ts'
 
 afterEach(() => {
 	mock.restore()
@@ -84,5 +92,75 @@ describe('saveCommand', () => {
 
 		expect(prompts.confirm).toHaveBeenCalled()
 		expect(saveAccount).toHaveBeenCalledWith('work', '/tmp/auth.json')
+	})
+
+	test('requires --overwrite in agent mode when the account exists', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const exit = stubProcessExit()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			saveAccount: mock(() => {}),
+			accountExists: mock((_name: string) => true),
+		}))
+		mock.module('../../src/lib/paths.ts', () => ({
+			validateName: mock((_name: string) => true),
+			resolveAuthPath: mock(() => '/tmp/auth.json'),
+		}))
+
+		try {
+			const { saveCommand } = await importFresh<typeof import('../../src/commands/save.ts')>(
+				'../../src/commands/save.ts',
+			)
+			await expect(runCommand(saveCommand, { args: { name: 'work' } })).rejects.toBeInstanceOf(
+				ExitError,
+			)
+			expect(exit.exitMock).toHaveBeenCalledWith(1)
+			expect(consoleCapture.errors.at(-1)).toContain('--overwrite')
+		} finally {
+			consoleCapture.restore()
+			exit.restore()
+		}
+	})
+
+	test('emits JSON output on success', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const saveAccount = mock((_name: string, _path: string) => {})
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			saveAccount,
+			accountExists: mock((_name: string) => false),
+		}))
+		mock.module('../../src/lib/paths.ts', () => ({
+			validateName: mock((_name: string) => true),
+			resolveAuthPath: mock(() => '/tmp/auth.json'),
+		}))
+
+		try {
+			const { saveCommand } = await importFresh<typeof import('../../src/commands/save.ts')>(
+				'../../src/commands/save.ts',
+			)
+			await runCommand(saveCommand, { args: { name: 'personal', json: true } })
+		} finally {
+			consoleCapture.restore()
+		}
+
+		const payload = JSON.parse(consoleCapture.logs.at(-1) ?? '{}') as {
+			ok: boolean
+			saved: string
+			snapshotPath: string
+			authPath: string
+			active: boolean
+			overwrote: boolean
+		}
+		expect(payload.ok).toBe(true)
+		expect(payload.saved).toBe('personal')
+		expect(payload.snapshotPath).toBe('~/.codex/accounts/personal.json')
+		expect(payload.authPath).toBe('/tmp/auth.json')
+		expect(payload.active).toBe(true)
+		expect(payload.overwrote).toBe(false)
 	})
 })

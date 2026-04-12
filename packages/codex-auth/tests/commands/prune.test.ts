@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import type { AccountUsage } from '../../src/types.ts'
-import { ExitError, importFresh, mockPrompts, runCommand, stubProcessExit } from './helpers.ts'
+import {
+	captureConsole,
+	ExitError,
+	importFresh,
+	mockAgent,
+	mockPrompts,
+	runCommand,
+	stubProcessExit,
+} from './helpers.ts'
 
 afterEach(() => {
 	mock.restore()
@@ -133,5 +141,84 @@ describe('pruneCommand', () => {
 		} finally {
 			exit.restore()
 		}
+	})
+
+	test('requires --yes in agent mode when expired accounts exist', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const exit = stubProcessExit()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
+			deleteAccount: mock(() => {}),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['dead', new Error('Auth failed with status 401')],
+					]),
+			),
+		}))
+
+		try {
+			const { pruneCommand } = await importFresh<typeof import('../../src/commands/prune.ts')>(
+				'../../src/commands/prune.ts',
+			)
+			await expect(runCommand(pruneCommand, { args: {} })).rejects.toBeInstanceOf(ExitError)
+			expect(exit.exitMock).toHaveBeenCalledWith(1)
+			expect(consoleCapture.errors.at(-1)).toContain('--yes')
+		} finally {
+			consoleCapture.restore()
+			exit.restore()
+		}
+	})
+
+	test('emits JSON output when pruning succeeds', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const deleteAccount = mock((_name: string) => {})
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [
+				{ name: 'healthy', auth: {} as never, isActive: true },
+				{ name: 'dead', auth: {} as never, isActive: false },
+			]),
+			deleteAccount,
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['healthy', okUsage()],
+						['dead', new Error('Session expired — re-login with `codex` CLI')],
+					]),
+			),
+		}))
+
+		try {
+			const { pruneCommand } = await importFresh<typeof import('../../src/commands/prune.ts')>(
+				'../../src/commands/prune.ts',
+			)
+			await runCommand(pruneCommand, { args: { json: true, yes: true } })
+		} finally {
+			consoleCapture.restore()
+		}
+
+		const payload = JSON.parse(consoleCapture.logs.at(-1) ?? '{}') as {
+			ok: boolean
+			total: number
+			expired: Array<{ name: string; reason: string }>
+			deleted: string[]
+			failed: string[]
+		}
+		expect(payload.ok).toBe(true)
+		expect(payload.total).toBe(2)
+		expect(payload.expired).toEqual([{ name: 'dead', reason: 'session expired' }])
+		expect(payload.deleted).toEqual(['dead'])
+		expect(payload.failed).toEqual([])
+		expect(deleteAccount).toHaveBeenCalledWith('dead')
 	})
 })

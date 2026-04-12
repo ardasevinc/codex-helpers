@@ -11,12 +11,20 @@ import { pruneCommand } from './commands/prune.ts'
 import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
+import { fail, printJson, resolveOutputMode } from './lib/output.ts'
 
 const main = defineCommand({
 	meta: {
 		name: 'codex-auth',
 		version: pkg.version,
 		description: 'Manage multiple Codex CLI accounts with usage monitoring',
+	},
+	args: {
+		json: {
+			type: 'boolean',
+			description: 'Emit machine-readable JSON output',
+			default: false,
+		},
 	},
 	subCommands: {
 		save: saveCommand,
@@ -29,14 +37,29 @@ const main = defineCommand({
 		import: importCommand,
 		push: pushCommand,
 	},
-	async run({ rawArgs }) {
+	async run({ rawArgs, args }) {
 		if (rawArgs.length === 1 && (rawArgs[0] === '-v' || rawArgs[0] === '-V')) {
 			console.log(pkg.version)
 			return
 		}
+
+		const mode = resolveOutputMode(args)
 		// Default to interactive use when no subcommand given
 		if (rawArgs.length === 0) {
-			await runUseInteractive()
+			if (mode.interactive) {
+				await runUseInteractive()
+				return
+			}
+
+			if (mode.json) {
+				printJson({
+					ok: false,
+					error: 'Interactive mode is disabled in non-interactive mode. Use a subcommand.',
+				})
+				process.exit(1)
+			}
+
+			fail(mode, 'Interactive mode is disabled in non-interactive mode. Use a subcommand.')
 		}
 	},
 })

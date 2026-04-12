@@ -1,9 +1,17 @@
-import * as p from '@clack/prompts'
 import ansis from 'ansis'
 import { defineCommand } from 'citty'
 import { listAccounts } from '../lib/accounts.ts'
 import { formatUsageLine } from '../lib/display.ts'
 import { classifyAccount } from '../lib/expiry.ts'
+import {
+	createSpinner,
+	printInfo,
+	printIntro,
+	printJson,
+	printOutro,
+	resolveOutputMode,
+	serializeUsage,
+} from '../lib/output.ts'
 import { fetchAllUsage } from '../lib/usage.ts'
 import type { AccountUsage } from '../types.ts'
 
@@ -12,19 +20,89 @@ export const listCommand = defineCommand({
 		name: 'list',
 		description: 'List all saved accounts with usage',
 	},
-	async run() {
+	args: {
+		json: {
+			type: 'boolean',
+			description: 'Emit machine-readable JSON output',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const mode = resolveOutputMode(args)
 		const accounts = listAccounts()
 		if (accounts.length === 0) {
-			p.log.info('No accounts saved. Run `codex-auth save <name>` to save your current session.')
+			if (mode.json) {
+				printJson({
+					ok: true,
+					accounts: [],
+					summary: { total: 0, active: null, ok: 0, expired: 0, error: 0 },
+				})
+				return
+			}
+			printInfo(
+				mode,
+				'No accounts saved. Run `codex-auth save <name>` to save your current session.',
+			)
 			return
 		}
 
-		const s = p.spinner()
+		const s = createSpinner(mode)
 		s.start('Fetching usage...')
 		const usageMap = await fetchAllUsage(accounts)
 		s.stop('Usage fetched')
 
-		p.intro('Saved accounts')
+		if (mode.json) {
+			const items = accounts.map((acc) => {
+				const result = usageMap.get(acc.name)
+				if (!result) {
+					return {
+						name: acc.name,
+						isActive: acc.isActive,
+						status: 'error',
+						message: 'usage missing',
+					}
+				}
+
+				const status = classifyAccount(result)
+				if (status.state === 'ok') {
+					return {
+						name: acc.name,
+						isActive: acc.isActive,
+						status: 'ok',
+						usage: serializeUsage(status.usage),
+					}
+				}
+				if (status.state === 'expired') {
+					return {
+						name: acc.name,
+						isActive: acc.isActive,
+						status: 'expired',
+						reason: status.reason,
+					}
+				}
+				return {
+					name: acc.name,
+					isActive: acc.isActive,
+					status: 'error',
+					message: status.message,
+				}
+			})
+
+			printJson({
+				ok: true,
+				accounts: items,
+				summary: {
+					total: items.length,
+					active: items.find((item) => item.isActive)?.name ?? null,
+					ok: items.filter((item) => item.status === 'ok').length,
+					expired: items.filter((item) => item.status === 'expired').length,
+					error: items.filter((item) => item.status === 'error').length,
+				},
+			})
+			return
+		}
+
+		printIntro(mode, 'Saved accounts')
 
 		for (const acc of accounts) {
 			const marker = acc.isActive ? ansis.green('●') : ansis.dim('○')
@@ -53,7 +131,7 @@ export const listCommand = defineCommand({
 			console.log()
 		}
 
-		p.outro(`${accounts.length} account${accounts.length === 1 ? '' : 's'} saved`)
+		printOutro(mode, `${accounts.length} account${accounts.length === 1 ? '' : 's'} saved`)
 	},
 })
 

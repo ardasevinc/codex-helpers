@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import type { AccountUsage } from '../../src/types.ts'
-import { importFresh, mockPrompts, runCommand } from './helpers.ts'
+import { captureConsole, importFresh, mockAgent, mockPrompts, runCommand } from './helpers.ts'
 
 afterEach(() => {
 	mock.restore()
@@ -192,5 +192,56 @@ describe('listCommand', () => {
 		}
 
 		expect(logs.some((line) => line.includes('subscription lapsed (free plan)'))).toBe(true)
+	})
+
+	test('emits JSON output', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const usage = sampleUsage()
+		const consoleCapture = captureConsole()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			listAccounts: mock(() => [
+				{ name: 'personal', auth: {} as never, isActive: true },
+				{ name: 'dead', auth: {} as never, isActive: false },
+			]),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: mock(
+				async () =>
+					new Map<string, AccountUsage | Error>([
+						['personal', usage],
+						['dead', new Error('Session expired — re-login with `codex` CLI')],
+					]),
+			),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatUsageLine: mock(() => ''),
+		}))
+
+		try {
+			const { listCommand } = await importFresh<typeof import('../../src/commands/list.ts')>(
+				'../../src/commands/list.ts',
+			)
+			await runCommand(listCommand, { args: { json: true } })
+		} finally {
+			consoleCapture.restore()
+		}
+
+		const payload = JSON.parse(consoleCapture.logs.at(-1) ?? '{}') as {
+			ok: boolean
+			accounts: Array<{ name: string; status: string; isActive: boolean }>
+			summary: { total: number; active: string | null; ok: number; expired: number; error: number }
+		}
+		expect(payload.ok).toBe(true)
+		expect(payload.summary).toEqual({
+			total: 2,
+			active: 'personal',
+			ok: 1,
+			expired: 1,
+			error: 0,
+		})
+		expect(payload.accounts[0]?.name).toBe('personal')
+		expect(payload.accounts[1]?.status).toBe('expired')
 	})
 })

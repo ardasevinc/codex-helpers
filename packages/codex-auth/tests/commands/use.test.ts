@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import type { AccountUsage } from '../../src/types.ts'
-import { ExitError, importFresh, mockPrompts, runCommand, stubProcessExit } from './helpers.ts'
+import {
+	captureConsole,
+	ExitError,
+	importFresh,
+	mockAgent,
+	mockPrompts,
+	runCommand,
+	stubProcessExit,
+} from './helpers.ts'
 
 afterEach(() => {
 	mock.restore()
@@ -125,5 +133,79 @@ describe('useCommand', () => {
 			}),
 		)
 		expect(switchAccount).toHaveBeenCalledWith('work')
+	})
+
+	test('requires a name in agent mode', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const exit = stubProcessExit()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			switchAccount: mock(() => {}),
+			listAccounts: mock(() => []),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: mock(async () => sampleUsage()),
+			fetchAllUsage: mock(async () => new Map()),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatAccountUsage: mock(() => []),
+			formatUsageCompact: mock(() => 'compact'),
+		}))
+
+		try {
+			const { useCommand } = await importFresh<typeof import('../../src/commands/use.ts')>(
+				'../../src/commands/use.ts',
+			)
+			await expect(runCommand(useCommand, { args: {} })).rejects.toBeInstanceOf(ExitError)
+			expect(exit.exitMock).toHaveBeenCalledWith(1)
+			expect(consoleCapture.errors.at(-1)).toContain(
+				'Interactive account selection is disabled in non-interactive mode. Pass an account name.',
+			)
+		} finally {
+			consoleCapture.restore()
+			exit.restore()
+		}
+	})
+
+	test('emits JSON output for named switches', async () => {
+		mockPrompts()
+		mockAgent('codex')
+		const consoleCapture = captureConsole()
+		const usage = sampleUsage()
+
+		mock.module('../../src/lib/accounts.ts', () => ({
+			switchAccount: mock((_name: string) => {}),
+			listAccounts: mock(() => []),
+		}))
+		mock.module('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: mock(async (_name: string) => usage),
+			fetchAllUsage: mock(async () => new Map()),
+		}))
+		mock.module('../../src/lib/display.ts', () => ({
+			formatAccountUsage: mock((_usage: AccountUsage) => []),
+			formatUsageCompact: mock((_usage: AccountUsage) => 'compact'),
+		}))
+
+		try {
+			const { useCommand } = await importFresh<typeof import('../../src/commands/use.ts')>(
+				'../../src/commands/use.ts',
+			)
+			await runCommand(useCommand, { args: { name: 'work', json: true } })
+		} finally {
+			consoleCapture.restore()
+		}
+
+		const payload = JSON.parse(consoleCapture.logs.at(-1) ?? '{}') as {
+			ok: boolean
+			switchedTo: string
+			usage: { planType: string }
+			usageError: string | null
+		}
+		expect(payload.ok).toBe(true)
+		expect(payload.switchedTo).toBe('work')
+		expect(payload.usage.planType).toBe('plus')
+		expect(payload.usageError).toBeNull()
 	})
 })
