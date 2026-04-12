@@ -16,12 +16,20 @@ Install dependencies from repo root:
 bun install
 ```
 
-Run checks:
+Run the `codex-auth` package gate:
 
 ```bash
-bun x @biomejs/biome check .
-bun x tsc --noEmit
-bun test
+cd packages/codex-auth
+bun run gate
+```
+
+Or run individual checks:
+
+```bash
+cd packages/codex-auth
+bun run lint
+bun run typecheck
+bun run test
 ```
 
 ## Install

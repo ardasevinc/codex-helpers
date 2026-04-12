@@ -6,6 +6,12 @@
   "bin": {
     "codex-auth": "./src/cli.ts"
   },
+  "scripts": {
+    "lint": "bun run biome check .",
+    "typecheck": "bun run tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "gate": "bun run lint && bun run typecheck && bun run test"
+  },
   "dependencies": {
     "@clack/prompts": "^1.0.1",
     "ansis": "^4.2.0",
