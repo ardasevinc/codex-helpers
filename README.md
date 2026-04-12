@@ -32,6 +32,18 @@ bun run typecheck
 bun run test
 ```
 
+Release notes helper:
+
+```bash
+./scripts/release-notes.sh codex-auth 0.3.3 <<'EOF' > /tmp/codex-auth-release-notes.md
+- summarize the shipped changes here
+EOF
+
+gh release create codex-auth-v0.3.3 \
+  --title "codex-auth v0.3.3" \
+  --notes-file /tmp/codex-auth-release-notes.md
+```
+
 ## Install
 
 ```bash

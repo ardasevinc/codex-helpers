@@ -87,6 +87,22 @@ cd packages/codex-auth
 bun link
 ```
 
+### Release Notes
+
+Release descriptions should include:
+
+- the generic install command
+- the version-pinned update command
+- direct binary download URLs for each target
+
+Use the repo helper to generate that boilerplate:
+
+```bash
+./scripts/release-notes.sh codex-auth 0.3.3 <<'EOF' > /tmp/codex-auth-release-notes.md
+- summarize the shipped changes here
+EOF
+```
+
 ---
 
 ## Codex Auth File Format
