@@ -9,6 +9,16 @@ function expectColorOrPlain(bar: string, ansiCode: string, plainBar: string) {
 	expect(bar).toBe(plainBar)
 }
 
+function withFrozenNow<T>(now: number, fn: () => T): T {
+	const realNow = Date.now
+	Date.now = () => now
+	try {
+		return fn()
+	} finally {
+		Date.now = realNow
+	}
+}
+
 describe('renderBar', () => {
 	test('renders at 0%', () => {
 		const bar = renderBar(0)
@@ -64,36 +74,54 @@ describe('renderBar', () => {
 
 describe('formatTimeRemaining', () => {
 	test('formats less than 1 hour', () => {
-		const resetAt = new Date(Date.now() + 42 * 60_000) // 42 minutes
-		expect(formatTimeRemaining(resetAt)).toBe('42m')
+		const now = Date.now()
+		const resetAt = new Date(now + 42 * 60_000) // 42 minutes
+		withFrozenNow(now, () => {
+			expect(formatTimeRemaining(resetAt)).toBe('42m')
+		})
 	})
 
 	test('formats exactly 0 minutes remaining', () => {
-		const resetAt = new Date(Date.now() - 1000) // in the past
-		expect(formatTimeRemaining(resetAt)).toBe('now')
+		const now = Date.now()
+		const resetAt = new Date(now - 1000) // in the past
+		withFrozenNow(now, () => {
+			expect(formatTimeRemaining(resetAt)).toBe('now')
+		})
 	})
 
 	test('formats 1-24 hours', () => {
-		const resetAt = new Date(Date.now() + 3 * 3600_000 + 42 * 60_000) // 3h 42m
-		const result = formatTimeRemaining(resetAt)
-		expect(result).toBe('3h 42m')
+		const now = Date.now()
+		const resetAt = new Date(now + 3 * 3600_000 + 42 * 60_000) // 3h 42m
+		withFrozenNow(now, () => {
+			const result = formatTimeRemaining(resetAt)
+			expect(result).toBe('3h 42m')
+		})
 	})
 
 	test('formats more than 24 hours', () => {
-		const resetAt = new Date(Date.now() + 4 * 86400_000 + 11 * 3600_000) // 4d 11h
-		const result = formatTimeRemaining(resetAt)
-		expect(result).toBe('4d 11h')
+		const now = Date.now()
+		const resetAt = new Date(now + 4 * 86400_000 + 11 * 3600_000) // 4d 11h
+		withFrozenNow(now, () => {
+			const result = formatTimeRemaining(resetAt)
+			expect(result).toBe('4d 11h')
+		})
 	})
 
 	test('formats exactly 1 hour', () => {
-		const resetAt = new Date(Date.now() + 3600_000)
-		const result = formatTimeRemaining(resetAt)
-		expect(result).toBe('1h 0m')
+		const now = Date.now()
+		const resetAt = new Date(now + 3600_000)
+		withFrozenNow(now, () => {
+			const result = formatTimeRemaining(resetAt)
+			expect(result).toBe('1h 0m')
+		})
 	})
 
 	test('formats exactly 24 hours', () => {
-		const resetAt = new Date(Date.now() + 86400_000)
-		const result = formatTimeRemaining(resetAt)
-		expect(result).toBe('1d 0h')
+		const now = Date.now()
+		const resetAt = new Date(now + 86400_000)
+		withFrozenNow(now, () => {
+			const result = formatTimeRemaining(resetAt)
+			expect(result).toBe('1d 0h')
+		})
 	})
 })
