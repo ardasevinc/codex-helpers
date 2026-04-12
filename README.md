@@ -41,21 +41,22 @@ bun link
 
 Commands:
 
-- `codex-auth save <name> [--overwrite] [--json]` — save current session as a named account
-- `codex-auth use [name] [--json]` — switch to a saved account (interactive if no name)
-- `codex-auth list [--json]` — list all accounts with plan type and usage (expired accounts flagged)
-- `codex-auth current [--json]` — show active account and usage
-- `codex-auth delete <name> [--yes] [--json]` — delete a saved account
-- `codex-auth prune [--yes] [--json]` — check all accounts and delete expired ones
+- `codex-auth save <name> [--overwrite] [--json|-j]` — save current session as a named account
+- `codex-auth use [name] [--json|-j]` — switch to a saved account (interactive if no name)
+- `codex-auth list [--json|-j]` — list all accounts with plan type and usage (expired accounts flagged)
+- `codex-auth current [--json|-j]` — show active account and usage
+- `codex-auth delete <name> [--yes] [--json|-j]` — delete a saved account
+- `codex-auth prune [--yes] [--json|-j]` — check all accounts and delete expired ones
 - `codex-auth export` — dump all accounts as JSON to stdout
-- `codex-auth import [--overwrite] [--json]` — import `codex-auth export` JSON from stdin
-- `codex-auth push <host> [--overwrite] [--json]` — push accounts to a remote host via SSH
+- `codex-auth import [--overwrite] [--json|-j]` — import `codex-auth export` JSON from stdin
+- `codex-auth push <host> [--overwrite] [--json|-j]` — push accounts to a remote host via SSH
 - `codex-auth -v` / `codex-auth -V` — print the current version
 
 Output and automation:
 
-- `--json` emits machine-readable JSON and disables interactive prompts.
+- `--json` / `-j` emits machine-readable JSON and disables interactive prompts.
 - AI agents are detected via `is-ai-agent`, and agent-detected runs automatically switch to non-interactive behavior.
+- Invalid flags now fail fast instead of being silently ignored.
 - Destructive flows require explicit flags in non-interactive mode:
   - `save` needs `--overwrite` when overwriting
   - `delete` needs `--yes`

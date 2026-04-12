@@ -28,6 +28,7 @@ export const useCommand = defineCommand({
 		json: {
 			type: 'boolean',
 			description: 'Emit machine-readable JSON output',
+			alias: 'j',
 			default: false,
 		},
 	},

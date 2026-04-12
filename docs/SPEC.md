@@ -152,10 +152,11 @@ Rationale: symlinks are transparent to writes. If `auth.json` points to a snapsh
 
 ### Output Modes
 
-- Commands that support `--json` should emit machine-readable JSON to stdout and must not prompt.
+- Commands that support `--json` / `-j` should emit machine-readable JSON to stdout and must not prompt.
 - Interactive prompts are allowed only when not in JSON mode and not running under an AI agent.
 - AI agent detection should use the `is-ai-agent` package.
 - When an AI agent is detected, commands must switch to non-interactive behavior automatically.
+- Unknown or invalid flags should fail fast with a non-zero exit code instead of being silently ignored.
 - In non-interactive mode:
   - `save` requires `--overwrite` to replace an existing account
   - `delete` requires `--yes`
@@ -169,7 +170,7 @@ Snapshot the current `auth.json` as a named account.
 **Args:**
 - `name` (required, positional): Account name. Must match `/^[a-zA-Z0-9_-]+$/`.
 - `--overwrite` (optional): Overwrite an existing saved account without prompting.
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Validate `name` format.
@@ -196,7 +197,7 @@ Switch to a saved account.
 
 **Args:**
 - `name` (optional, positional): Account to switch to.
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior (with name):**
 1. Check account exists in `~/.codex/accounts/<name>.json`. Error if not.
@@ -238,7 +239,7 @@ Switch to a saved account.
 List all saved accounts with plan type and usage data. Expired accounts are flagged.
 
 **Args:**
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Read all `.json` files in `~/.codex/accounts/` (excluding `_active.json`).
@@ -275,7 +276,7 @@ List all saved accounts with plan type and usage data. Expired accounts are flag
 Show the currently active account and its usage.
 
 **Args:**
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Read `_active.json`. If not found, print `"No active account. Run codex-auth use to select one."` and exit.
@@ -301,7 +302,7 @@ Delete a saved account.
 **Args:**
 - `name` (required, positional): Account name to delete.
 - `--yes` (optional): Delete without prompting.
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Validate `name` format.
@@ -328,7 +329,7 @@ Check all accounts for expiry and delete expired ones after confirmation.
 
 **Args:**
 - `--yes` (optional): Delete expired accounts without prompting.
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. List all accounts. If none, show info and exit.
@@ -379,7 +380,7 @@ Import accounts from JSON on stdin.
 
 **Args:**
 - `--overwrite` (optional): Replace existing accounts. Without this flag, existing accounts are skipped.
-- `--json` (optional): Emit machine-readable JSON output.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
 
 **Behavior:**
 1. Read JSON from stdin (e.g. piped from `codex-auth export`).

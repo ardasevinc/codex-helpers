@@ -11,6 +11,7 @@ import { pruneCommand } from './commands/prune.ts'
 import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
+import { hasJsonFlag, validateRawArgs } from './lib/argv.ts'
 import { fail, printJson, resolveOutputMode } from './lib/output.ts'
 
 const main = defineCommand({
@@ -23,6 +24,7 @@ const main = defineCommand({
 		json: {
 			type: 'boolean',
 			description: 'Emit machine-readable JSON output',
+			alias: 'j',
 			default: false,
 		},
 	},
@@ -64,4 +66,16 @@ const main = defineCommand({
 	},
 })
 
-runMain(main)
+const rawArgs = process.argv.slice(2)
+const validationError = validateRawArgs(rawArgs, main as Parameters<typeof validateRawArgs>[1])
+
+if (validationError) {
+	if (hasJsonFlag(rawArgs)) {
+		printJson({ ok: false, error: validationError })
+	} else {
+		console.error(validationError)
+	}
+	process.exit(1)
+}
+
+runMain(main, { rawArgs })

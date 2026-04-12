@@ -21,6 +21,7 @@ export const pushCommand = defineCommand({
 		json: {
 			type: 'boolean',
 			description: 'Emit machine-readable JSON output',
+			alias: 'j',
 			default: false,
 		},
 	},
