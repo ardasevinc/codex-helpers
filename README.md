@@ -62,10 +62,10 @@ bun link
 Commands:
 
 - `codex-auth save <name> [--overwrite] [--json|-j]` — save current session as a named account
-- `codex-auth use [name] [--json|-j]` — switch to a saved account (interactive if no name)
-- `codex-auth list [--json|-j]` — list all accounts with plan type and usage (expired accounts flagged)
+- `codex-auth use [name] [--json|-j]` / `codex-auth switch [name] [--json|-j]` — switch to a saved account (interactive if no name)
+- `codex-auth list [--json|-j]` / `codex-auth ls [--json|-j]` — list all accounts with plan type and usage (expired accounts flagged)
 - `codex-auth current [--json|-j]` — show active account and usage
-- `codex-auth delete <name> [--yes] [--json|-j]` — delete a saved account
+- `codex-auth delete <name> [--yes] [--json|-j]` / `codex-auth remove <name>` / `codex-auth rm <name>` — delete a saved account
 - `codex-auth prune [--yes] [--json|-j]` — check all accounts and delete expired ones
 - `codex-auth export` — dump all accounts as JSON to stdout
 - `codex-auth import [--overwrite] [--json|-j]` — import `codex-auth export` JSON from stdin
@@ -75,6 +75,7 @@ Commands:
 Output and automation:
 
 - `--json` / `-j` emits machine-readable JSON and disables interactive prompts.
+- command aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`
 - AI agents are detected via `is-ai-agent`, and agent-detected runs automatically switch to non-interactive behavior.
 - Invalid flags now fail fast instead of being silently ignored.
 - Destructive flows require explicit flags in non-interactive mode:

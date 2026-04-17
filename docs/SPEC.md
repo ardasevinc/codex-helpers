@@ -169,6 +169,7 @@ Rationale: symlinks are transparent to writes. If `auth.json` points to a snapsh
 ### Output Modes
 
 - Commands that support `--json` / `-j` should emit machine-readable JSON to stdout and must not prompt.
+- Root-level command aliases should normalize before validation and execution. Current aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`.
 - Interactive prompts are allowed only when not in JSON mode and not running under an AI agent.
 - AI agent detection should use the `is-ai-agent` package.
 - When an AI agent is detected, commands must switch to non-interactive behavior automatically.
@@ -207,7 +208,7 @@ Snapshot the current `auth.json` as a named account.
 └ This account is now active.
 ```
 
-### `codex-auth use [name]`
+### `codex-auth use [name]` / `codex-auth switch [name]`
 
 Switch to a saved account.
 
@@ -250,7 +251,7 @@ Switch to a saved account.
 └
 ```
 
-### `codex-auth list`
+### `codex-auth list` / `codex-auth ls`
 
 List all saved accounts with plan type and usage data. Expired accounts are flagged.
 
@@ -311,7 +312,7 @@ Show the currently active account and its usage.
    │ credits: $5.39 remaining
    ```
 
-### `codex-auth delete <name>`
+### `codex-auth delete <name>` / `codex-auth remove <name>` / `codex-auth rm <name>`
 
 Delete a saved account.
 

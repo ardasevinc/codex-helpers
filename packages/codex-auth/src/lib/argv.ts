@@ -12,6 +12,13 @@ type FlagSpec = {
 	takesValue: boolean
 }
 
+const COMMAND_ALIASES: Record<string, string> = {
+	switch: 'use',
+	remove: 'delete',
+	rm: 'delete',
+	ls: 'list',
+}
+
 function getArgDefs(command: CommandShape): Record<string, ArgDef> {
 	if (!command.args || typeof command.args !== 'object') return {}
 	return command.args as Record<string, ArgDef>
@@ -52,6 +59,23 @@ function consumeFlagValue(rawArgs: string[], index: number, token: string): numb
 
 export function hasJsonFlag(rawArgs: string[]): boolean {
 	return rawArgs.includes('--json') || rawArgs.includes('-j')
+}
+
+export function normalizeRawArgs(rawArgs: string[]): string[] {
+	for (let i = 0; i < rawArgs.length; i += 1) {
+		const token = rawArgs[i]
+		if (!token || token === '--') break
+		if (token.startsWith('-')) continue
+
+		const canonical = COMMAND_ALIASES[token]
+		if (!canonical) return rawArgs
+
+		const normalized = [...rawArgs]
+		normalized[i] = canonical
+		return normalized
+	}
+
+	return rawArgs
 }
 
 export function validateRawArgs(rawArgs: string[], root: CommandShape): string | null {

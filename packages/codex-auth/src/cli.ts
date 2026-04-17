@@ -11,7 +11,7 @@ import { pruneCommand } from './commands/prune.ts'
 import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
-import { hasJsonFlag, validateRawArgs } from './lib/argv.ts'
+import { hasJsonFlag, normalizeRawArgs, validateRawArgs } from './lib/argv.ts'
 import { fail, printJson, resolveOutputMode } from './lib/output.ts'
 
 const main = defineCommand({
@@ -66,7 +66,7 @@ const main = defineCommand({
 	},
 })
 
-const rawArgs = process.argv.slice(2)
+const rawArgs = normalizeRawArgs(process.argv.slice(2))
 const validationError = validateRawArgs(rawArgs, main as Parameters<typeof validateRawArgs>[1])
 
 if (validationError) {
