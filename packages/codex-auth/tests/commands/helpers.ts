@@ -9,6 +9,10 @@ type DeepPartial<T> = T extends (...args: never[]) => unknown
 		? { [K in keyof T]?: DeepPartial<T[K]> }
 		: T
 
+type CommandRunContext<TCommand> = TCommand extends { run?: (ctx: infer TContext) => unknown }
+	? TContext
+	: never
+
 export class ExitError extends Error {
 	code: number
 
@@ -132,12 +136,11 @@ export async function importFresh<T>(path: string): Promise<T> {
 	return (await import(/* @vite-ignore */ `${path}?test=${importCounter}`)) as T
 }
 
-export async function runCommand<TContext>(
-	command: { run?: (ctx: TContext) => unknown | Promise<unknown> },
-	ctx: DeepPartial<TContext>,
-) {
+export async function runCommand<
+	TCommand extends { run?: (ctx: unknown) => unknown | Promise<unknown> },
+>(command: TCommand, ctx: DeepPartial<CommandRunContext<TCommand>>) {
 	if (!command.run) {
 		throw new Error('Command has no run() handler')
 	}
-	return await command.run(ctx as TContext)
+	return await command.run(ctx as CommandRunContext<TCommand>)
 }
