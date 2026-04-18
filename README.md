@@ -65,6 +65,7 @@ Commands:
 - `codex-auth use [name] [--json|-j]` / `codex-auth switch [name] [--json|-j]` — switch to a saved account (interactive if no name)
 - `codex-auth list [--json|-j]` / `codex-auth ls [--json|-j]` — list all accounts with plan type and usage (expired accounts flagged)
 - `codex-auth current [--json|-j]` — show active account and usage
+- `codex-auth watch [--interval <seconds>] [--once]` — live-refresh the current account usage in a terminal view
 - `codex-auth delete <name> [--yes] [--json|-j]` / `codex-auth remove <name>` / `codex-auth rm <name>` — delete a saved account
 - `codex-auth prune [--yes] [--json|-j]` — check all accounts and delete expired ones
 - `codex-auth export` — dump all accounts as JSON to stdout
@@ -83,6 +84,7 @@ Output and automation:
   - `delete` needs `--yes`
   - `prune` needs `--yes`
 - `use` without a name is interactive-only; in non-interactive mode pass the account name explicitly.
+- `watch` is terminal-oriented; live mode requires an interactive TTY, but `--once` prints a single snapshot and exits.
 
 Multi-machine sync:
 

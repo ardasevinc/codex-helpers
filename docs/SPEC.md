@@ -33,6 +33,7 @@ codex-helpers/
         │   │   ├── use.ts    # `codex-auth use [name]`
         │   │   ├── list.ts   # `codex-auth list`
         │   │   ├── current.ts# `codex-auth current`
+        │   │   ├── watch.ts  # `codex-auth watch`
         │   │   ├── delete.ts # `codex-auth delete <name>`
         │   │   ├── prune.ts  # `codex-auth prune`
         │   │   ├── export.ts # `codex-auth export`
@@ -311,6 +312,30 @@ Show the currently active account and its usage.
    ```
    │ credits: $5.39 remaining
    ```
+
+### `codex-auth watch`
+
+Live-refresh the current account usage in a terminal-oriented view.
+
+**Args:**
+- `--interval <seconds>` (optional): Refresh cadence. Default `5`. Minimum `1`.
+- `--once` (optional): Render a single frame and exit instead of looping.
+
+**Behavior:**
+1. Resolve the current active account.
+2. Render a bordered terminal view with:
+   - account name
+   - plan type (when available)
+   - last update timestamp
+   - refresh cadence
+   - the current 5-hour and weekly usage lines
+   - credits line when available
+3. In looping mode, clear and redraw the terminal every interval until interrupted.
+4. If there is no active account, no saved snapshot, or usage fetch fails, render that state in the watch view instead of crashing.
+
+**Notes:**
+- Live looping mode requires an interactive TTY.
+- `--once` is allowed in non-interactive contexts and is intended for quick snapshots/tests.
 
 ### `codex-auth delete <name>` / `codex-auth remove <name>` / `codex-auth rm <name>`
 
