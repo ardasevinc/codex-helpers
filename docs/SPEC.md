@@ -39,14 +39,16 @@ codex-helpers/
         │   │   ├── prune.ts  # `codex-auth prune`
         │   │   ├── export.ts # `codex-auth export`
         │   │   ├── import.ts # `codex-auth import`
-        │   │   └── push.ts   # `codex-auth push <host>`
+        │   │   ├── push.ts   # `codex-auth push <host>`
+        │   │   └── update.ts # `codex-auth update [version]`
         │   ├── lib/
         │   │   ├── accounts.ts   # account CRUD (snapshot, restore, list, delete)
         │   │   ├── auth.ts       # auth.json reading, token refresh
         │   │   ├── usage.ts      # usage API fetching & parsing
         │   │   ├── expiry.ts     # account health classification
         │   │   ├── display.ts    # progress bars, time formatting
-        │   │   └── paths.ts      # path resolution constants
+        │   │   ├── paths.ts      # path resolution constants
+        │   │   └── update.ts     # release discovery, install detection, binary replacement
         │   └── types.ts      # shared type definitions
         └── tests/
             ├── helpers.ts
@@ -55,6 +57,7 @@ codex-helpers/
             ├── auth.test.ts
             ├── display.test.ts
             ├── expiry.test.ts
+            ├── update.test.ts
             ├── usage.test.ts
             └── commands/
                 ├── helpers.ts
@@ -63,7 +66,8 @@ codex-helpers/
                 ├── list.test.ts
                 ├── current.test.ts
                 ├── delete.test.ts
-                └── prune.test.ts
+                ├── prune.test.ts
+                └── update.test.ts
 ```
 
 ### Tech Stack
@@ -172,7 +176,7 @@ Rationale: symlinks are transparent to writes. If `auth.json` points to a snapsh
 ### Output Modes
 
 - Commands that support `--json` / `-j` should emit machine-readable JSON to stdout and must not prompt.
-- Root-level command aliases should normalize before validation and execution. Current aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`.
+- Root-level command aliases should normalize before validation and execution. Current aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`, `upgrade -> update`.
 - Interactive prompts are allowed only when not in JSON mode and not running under an AI agent.
 - AI agent detection should use the `is-ai-agent` package.
 - When an AI agent is detected, commands must switch to non-interactive behavior automatically.
@@ -469,6 +473,31 @@ codex-auth push user@192.168.1.10 --overwrite
 │ Pushed: personal, work
 └
 ```
+
+### `codex-auth update [version]` / `codex-auth upgrade [version]`
+
+Check for or install a released `codex-auth` binary update.
+
+**Args:**
+- `version` (optional, positional): Install a specific version instead of the latest package release.
+- `--check` (optional): Report install status and latest release without modifying anything.
+- `--json` / `-j` (optional): Emit machine-readable JSON output.
+
+**Behavior:**
+1. Discover the current `codex-auth` executable from `PATH`.
+2. Detect install mode:
+   - regular file install: self-update supported
+   - symlink/script install (for example `bun link`): self-update refused with an installer hint
+3. Fetch release metadata from GitHub:
+   - latest package release when no version is given
+   - exact `codex-auth-v<version>` release when a version is supplied
+4. Select the asset matching the current OS/arch.
+5. `--check` prints the installed path/version, latest version, and whether self-update is supported.
+6. `update` downloads the asset and atomically replaces the discovered executable path.
+
+**Notes:**
+- Self-update intentionally refuses Bun-linked or other symlink/script installs. Those should be updated by relinking from the repo or by reinstalling a released binary.
+- On write-permission failures, the command should fail with a clear fallback installer command.
 
 ### Default Command (no subcommand)
 

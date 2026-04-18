@@ -14,6 +14,7 @@ const rootCommand = {
 		list: currentCommand,
 		delete: currentCommand,
 		current: currentCommand,
+		update: currentCommand,
 	},
 }
 
@@ -29,6 +30,10 @@ describe('command aliases', () => {
 
 	test('normalizes ls to list', () => {
 		expect(normalizeRawArgs(['ls'])).toEqual(['list'])
+	})
+
+	test('normalizes upgrade to update', () => {
+		expect(normalizeRawArgs(['upgrade'])).toEqual(['update'])
 	})
 })
 

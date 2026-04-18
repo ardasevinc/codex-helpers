@@ -82,12 +82,13 @@ Commands:
 - `codex-auth export` — dump all accounts as JSON to stdout
 - `codex-auth import [--overwrite] [--json|-j]` — import `codex-auth export` JSON from stdin
 - `codex-auth push <host> [--overwrite] [--json|-j]` — push accounts to a remote host via SSH
+- `codex-auth update [version] [--check] [--json|-j]` / `codex-auth upgrade [version] [--check] [--json|-j]` — check for or install a released binary update
 - `codex-auth -v` / `codex-auth -V` — print the current version
 
 Output and automation:
 
 - `--json` / `-j` emits machine-readable JSON and disables interactive prompts.
-- command aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`
+- command aliases: `switch -> use`, `ls -> list`, `remove|rm -> delete`, `upgrade -> update`
 - AI agents are detected via `is-ai-agent`, and agent-detected runs automatically switch to non-interactive behavior.
 - Invalid flags now fail fast instead of being silently ignored.
 - Destructive flows require explicit flags in non-interactive mode:
@@ -96,6 +97,8 @@ Output and automation:
   - `prune` needs `--yes`
 - `use` without a name is interactive-only; in non-interactive mode pass the account name explicitly.
 - `watch` is terminal-oriented; live mode requires an interactive TTY, but `--once` prints a single snapshot and exits.
+- `update --check` reports the installed path/version and latest release without changing anything.
+- `update` only self-updates regular-file installs created by the release installer. Bun-linked or other symlink/script installs are detected and refused with an installer hint.
 
 Multi-machine sync:
 

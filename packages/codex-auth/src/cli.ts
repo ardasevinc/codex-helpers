@@ -10,6 +10,7 @@ import { listCommand } from './commands/list.ts'
 import { pruneCommand } from './commands/prune.ts'
 import { pushCommand } from './commands/push.ts'
 import { saveCommand } from './commands/save.ts'
+import { updateCommand } from './commands/update.ts'
 import { runUseInteractive, useCommand } from './commands/use.ts'
 import { watchCommand } from './commands/watch.ts'
 import { hasJsonFlag, normalizeRawArgs, validateRawArgs } from './lib/argv.ts'
@@ -40,6 +41,7 @@ const main = defineCommand({
 		import: importCommand,
 		push: pushCommand,
 		watch: watchCommand,
+		update: updateCommand,
 	},
 	async run({ rawArgs, args }) {
 		if (rawArgs.length === 1 && (rawArgs[0] === '-v' || rawArgs[0] === '-V')) {

@@ -17,6 +17,7 @@ const COMMAND_ALIASES: Record<string, string> = {
 	remove: 'delete',
 	rm: 'delete',
 	ls: 'list',
+	upgrade: 'update',
 }
 
 function getArgDefs(command: CommandShape): Record<string, ArgDef> {
