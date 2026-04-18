@@ -43,7 +43,7 @@ export interface UsageResponse {
 	credits?: {
 		has_credits: boolean
 		unlimited: boolean
-		balance: number
+		balance: number | string
 	}
 	additional_rate_limits?: Array<{
 		limit_name: string

@@ -4,6 +4,14 @@ import { needsRefresh, readAuthForAccount, refreshToken } from './auth.ts'
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
 const USAGE_TIMEOUT_MS = 10_000
 
+function parseCreditsBalance(balance: number | string): number {
+	const parsed = typeof balance === 'number' ? balance : Number(balance)
+	if (!Number.isFinite(parsed)) {
+		return 0
+	}
+	return parsed
+}
+
 export function parseUsageResponse(raw: UsageResponse): AccountUsage {
 	return {
 		planType: raw.plan_type,
@@ -21,7 +29,7 @@ export function parseUsageResponse(raw: UsageResponse): AccountUsage {
 			? {
 					hasCredits: raw.credits.has_credits,
 					unlimited: raw.credits.unlimited,
-					balance: raw.credits.balance,
+					balance: parseCreditsBalance(raw.credits.balance),
 				}
 			: undefined,
 	}

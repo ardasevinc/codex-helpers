@@ -32,6 +32,15 @@ describe('parseUsageResponse', () => {
 		expect(usage.credits?.balance).toBe(5.39)
 	})
 
+	test('normalizes string credit balances to numbers', () => {
+		const raw = mockUsageResponse({
+			credits: { has_credits: true, unlimited: false, balance: '28.7200000000' },
+		})
+		const usage = parseUsageResponse(raw)
+
+		expect(usage.credits?.balance).toBe(28.72)
+	})
+
 	test('handles missing credits', () => {
 		const raw = mockUsageResponse()
 		const usage = parseUsageResponse(raw)

@@ -136,11 +136,12 @@ describe('currentCommand', () => {
 			ok: boolean
 			status: string
 			active: { name: string; switchedAt: string; snapshotExists: boolean }
-			usage: { planType: string }
+			usage: { planType: string; credits?: { balance: number } }
 		}
 		expect(payload.ok).toBe(true)
 		expect(payload.status).toBe('ok')
 		expect(payload.active.name).toBe('personal')
 		expect(payload.usage.planType).toBe('plus')
+		expect(payload.usage.credits?.balance).toBe(5.39)
 	})
 })
