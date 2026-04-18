@@ -1,7 +1,39 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { vi } from 'vitest'
 import type { CodexAuth, UsageResponse } from '../src/types.ts'
+
+const mockedModules = new Set<string>()
+let mockBaseUrl: string | null = null
+type DoMockFactory = Exclude<Parameters<typeof vi.doMock>[1], undefined | { spy?: boolean }>
+
+export function setMockBaseUrl(url: string) {
+	mockBaseUrl = url
+}
+
+export function mockModule(path: string, factory: DoMockFactory) {
+	const resolved =
+		path.startsWith('.') && mockBaseUrl ? fileURLToPath(new URL(path, mockBaseUrl)) : path
+	mockedModules.add(resolved)
+	vi.doUnmock(resolved)
+	vi.doMock(resolved, factory)
+}
+
+export function resetTestState() {
+	vi.restoreAllMocks()
+	vi.resetAllMocks()
+	vi.clearAllMocks()
+	vi.unstubAllGlobals()
+	vi.resetModules()
+
+	for (const path of mockedModules) {
+		vi.doUnmock(path)
+	}
+
+	mockedModules.clear()
+}
 
 /** Create an isolated temp directory for test filesystem ops */
 export function createTmpDir(): string {

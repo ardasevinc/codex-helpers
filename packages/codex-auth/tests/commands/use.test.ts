@@ -1,17 +1,22 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { AccountUsage } from '../../src/types.ts'
 import {
 	captureConsole,
 	ExitError,
 	importFresh,
 	mockAgent,
+	mockModule,
 	mockPrompts,
+	resetTestState,
 	runCommand,
+	setMockBaseUrl,
 	stubProcessExit,
 } from './helpers.ts'
 
+setMockBaseUrl(import.meta.url)
+
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 function sampleUsage(): AccountUsage {
@@ -33,21 +38,21 @@ function sampleUsage(): AccountUsage {
 describe('useCommand', () => {
 	test('switches to named account and shows usage', async () => {
 		const prompts = mockPrompts()
-		const switchAccount = mock((_name: string) => {})
-		const fetchUsageForAccount = mock(async (_name: string) => sampleUsage())
-		const formatAccountUsage = mock((_usage: AccountUsage) => ['line 1', 'line 2'])
+		const switchAccount = vi.fn((_name: string) => {})
+		const fetchUsageForAccount = vi.fn(async (_name: string) => sampleUsage())
+		const formatAccountUsage = vi.fn((_usage: AccountUsage) => ['line 1', 'line 2'])
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			switchAccount,
-			listAccounts: mock(() => []),
+			listAccounts: vi.fn(() => []),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
+		mockModule('../../src/lib/usage.ts', () => ({
 			fetchUsageForAccount,
-			fetchAllUsage: mock(async () => new Map()),
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
+		mockModule('../../src/lib/display.ts', () => ({
 			formatAccountUsage,
-			formatUsageCompact: mock((_usage: AccountUsage) => 'compact'),
+			formatUsageCompact: vi.fn((_usage: AccountUsage) => 'compact'),
 		}))
 
 		const { useCommand } = await importFresh<typeof import('../../src/commands/use.ts')>(
@@ -65,19 +70,19 @@ describe('useCommand', () => {
 		const prompts = mockPrompts()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			switchAccount: mock((_name: string) => {
+		mockModule('../../src/lib/accounts.ts', () => ({
+			switchAccount: vi.fn((_name: string) => {
 				throw new Error('Account "missing" not found.')
 			}),
-			listAccounts: mock(() => []),
+			listAccounts: vi.fn(() => []),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => sampleUsage()),
-			fetchAllUsage: mock(async () => new Map()),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: vi.fn(async (_name: string) => sampleUsage()),
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => ['line 1']),
-			formatUsageCompact: mock((_usage: AccountUsage) => 'compact'),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => ['line 1']),
+			formatUsageCompact: vi.fn((_usage: AccountUsage) => 'compact'),
 		}))
 
 		try {
@@ -97,18 +102,18 @@ describe('useCommand', () => {
 	test('interactive mode preselects active account', async () => {
 		const prompts = mockPrompts({ selectResult: 'work' })
 		const usage = sampleUsage()
-		const switchAccount = mock((_name: string) => {})
+		const switchAccount = vi.fn((_name: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			switchAccount,
-			listAccounts: mock(() => [
+			listAccounts: vi.fn(() => [
 				{ name: 'personal', auth: {} as never, isActive: true },
 				{ name: 'work', auth: {} as never, isActive: false },
 			]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => usage),
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: vi.fn(async (_name: string) => usage),
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['personal', usage],
@@ -116,9 +121,9 @@ describe('useCommand', () => {
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => ['line 1']),
-			formatUsageCompact: mock((_usage: AccountUsage) => 'compact'),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => ['line 1']),
+			formatUsageCompact: vi.fn((_usage: AccountUsage) => 'compact'),
 		}))
 
 		const { useCommand } = await importFresh<typeof import('../../src/commands/use.ts')>(
@@ -141,17 +146,17 @@ describe('useCommand', () => {
 		const consoleCapture = captureConsole()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			switchAccount: mock(() => {}),
-			listAccounts: mock(() => []),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			switchAccount: vi.fn(() => {}),
+			listAccounts: vi.fn(() => []),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async () => sampleUsage()),
-			fetchAllUsage: mock(async () => new Map()),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: vi.fn(async () => sampleUsage()),
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock(() => []),
-			formatUsageCompact: mock(() => 'compact'),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn(() => []),
+			formatUsageCompact: vi.fn(() => 'compact'),
 		}))
 
 		try {
@@ -175,17 +180,17 @@ describe('useCommand', () => {
 		const consoleCapture = captureConsole()
 		const usage = sampleUsage()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			switchAccount: mock((_name: string) => {}),
-			listAccounts: mock(() => []),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			switchAccount: vi.fn((_name: string) => {}),
+			listAccounts: vi.fn(() => []),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => usage),
-			fetchAllUsage: mock(async () => new Map()),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchUsageForAccount: vi.fn(async (_name: string) => usage),
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => []),
-			formatUsageCompact: mock((_usage: AccountUsage) => 'compact'),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => []),
+			formatUsageCompact: vi.fn((_usage: AccountUsage) => 'compact'),
 		}))
 
 		try {

@@ -26,6 +26,7 @@ codex-helpers/
     └── codex-auth/
         ├── package.json      # bin: { "codex-auth": "./src/cli.ts" }
         ├── tsconfig.json     # extends root
+        ├── vitest.config.ts  # package-local vitest config
         ├── src/
         │   ├── cli.ts        # entry point, citty command definitions
         │   ├── commands/
@@ -49,6 +50,7 @@ codex-helpers/
         │   └── types.ts      # shared type definitions
         └── tests/
             ├── helpers.ts
+            ├── vitest.setup.ts
             ├── accounts.test.ts
             ├── auth.test.ts
             ├── display.test.ts
@@ -68,11 +70,11 @@ codex-helpers/
 
 | Layer              | Library           | Version    | Purpose                          |
 | ------------------ | ----------------- | ---------- | -------------------------------- |
-| Runtime            | Bun               | latest     | Runtime, test runner, package mgr|
+| Runtime            | Bun               | latest     | Runtime and package manager      |
 | CLI framework      | citty             | latest     | Command parsing, subcommands     |
 | Interactive prompts | @clack/prompts   | latest     | Select menus, spinners, confirm  |
 | Colors             | ansis             | latest     | Terminal color output             |
-| Testing            | bun:test          | built-in   | Unit and integration tests       |
+| Testing            | Vitest            | latest     | Unit and integration tests       |
 
 No other dependencies unless strictly necessary.
 
@@ -696,7 +698,7 @@ Format `reset_at` relative to now:
 
 ## Test Plan
 
-All tests use `bun:test`. Tests should mock filesystem and network operations — never touch real `~/.codex/` or hit real APIs.
+All tests use `vitest`, invoked via Bun-managed package scripts (`bun run test`, `bun run test:watch`, `bun run gate`). Tests should mock filesystem and network operations — never touch real `~/.codex/` or hit real APIs.
 
 ### Unit Tests
 

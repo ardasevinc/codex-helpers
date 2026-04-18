@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { parseImportInput } from '../../src/commands/import.ts'
 import { mockAuth } from '../helpers.ts'
 import {
@@ -6,13 +6,18 @@ import {
 	ExitError,
 	importFresh,
 	mockAgent,
+	mockModule,
 	mockPrompts,
+	resetTestState,
 	runCommand,
+	setMockBaseUrl,
 	stubProcessExit,
 } from './helpers.ts'
 
+setMockBaseUrl(import.meta.url)
+
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 describe('parseImportInput', () => {
@@ -58,10 +63,10 @@ describe('parseImportInput', () => {
 		mockAgent('codex')
 		const consoleCapture = captureConsole()
 		const originalText = Bun.stdin.text
-		Bun.stdin.text = mock(async () => JSON.stringify({ main: mockAuth(), alt: mockAuth() }))
-		const importAccounts = mock(() => ({ imported: ['main', 'alt'], skipped: [] }))
+		Bun.stdin.text = vi.fn(async () => JSON.stringify({ main: mockAuth(), alt: mockAuth() }))
+		const importAccounts = vi.fn(() => ({ imported: ['main', 'alt'], skipped: [] }))
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			importAccounts,
 			validateImportData: (data: unknown) => data,
 		}))
@@ -93,9 +98,9 @@ describe('parseImportInput', () => {
 		const consoleCapture = captureConsole()
 		const exit = stubProcessExit()
 		const originalText = Bun.stdin.text
-		Bun.stdin.text = mock(async () => JSON.stringify({ main: mockAuth() }))
-		mock.module('../../src/lib/accounts.ts', () => ({
-			importAccounts: mock(() => ({ imported: [], skipped: [] })),
+		Bun.stdin.text = vi.fn(async () => JSON.stringify({ main: mockAuth() }))
+		mockModule('../../src/lib/accounts.ts', () => ({
+			importAccounts: vi.fn(() => ({ imported: [], skipped: [] })),
 			validateImportData: () => {
 				throw new Error('Received a single auth.json payload.')
 			},

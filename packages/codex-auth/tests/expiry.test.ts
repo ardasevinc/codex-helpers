@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { classifyAccount, findExpired } from '../src/lib/expiry.ts'
 import type { AccountUsage } from '../src/types.ts'
 

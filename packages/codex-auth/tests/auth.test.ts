@@ -1,13 +1,18 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { needsRefresh, readAuth, refreshToken } from '../src/lib/auth.ts'
-import { cleanTmpDir, createTmpDir, mockAuth } from './helpers.ts'
+import { cleanTmpDir, createTmpDir, mockAuth, resetTestState } from './helpers.ts'
 
 let tmpDir: string
 
-const setFetch = (fn: any) => {
-	globalThis.fetch = fn
+type FetchHandler = (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+
+const setFetch = (fn: FetchHandler) => {
+	const mockFetch: typeof fetch = Object.assign(fn, {
+		preconnect: globalThis.fetch.preconnect,
+	})
+	globalThis.fetch = mockFetch
 }
 
 beforeEach(() => {
@@ -16,7 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanTmpDir(tmpDir)
-	mock.restore()
+	resetTestState()
 })
 
 describe('readAuth', () => {
@@ -75,7 +80,7 @@ describe('refreshToken', () => {
 		const auth = mockAuth()
 
 		setFetch(
-			mock(() =>
+			vi.fn(() =>
 				Promise.resolve(
 					new Response(
 						JSON.stringify({
@@ -100,7 +105,7 @@ describe('refreshToken', () => {
 		const auth = mockAuth()
 
 		setFetch(
-			mock(() =>
+			vi.fn(() =>
 				Promise.resolve(
 					new Response(JSON.stringify({ error: { code: 'refresh_token_expired' } }), {
 						status: 400,
@@ -116,7 +121,7 @@ describe('refreshToken', () => {
 		const auth = mockAuth()
 
 		setFetch(
-			mock(() =>
+			vi.fn(() =>
 				Promise.resolve(
 					new Response(JSON.stringify({ error: { code: 'refresh_token_reused' } }), {
 						status: 400,
@@ -132,7 +137,7 @@ describe('refreshToken', () => {
 		const auth = mockAuth()
 
 		setFetch(
-			mock(() =>
+			vi.fn(() =>
 				Promise.resolve(
 					new Response(JSON.stringify({ error: { code: 'refresh_token_invalidated' } }), {
 						status: 400,
@@ -147,7 +152,7 @@ describe('refreshToken', () => {
 	test('handles missing access_token in response', async () => {
 		const auth = mockAuth()
 
-		setFetch(mock(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))))
+		setFetch(vi.fn(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))))
 
 		await expect(refreshToken(auth)).rejects.toThrow('missing access_token')
 	})
@@ -157,7 +162,7 @@ describe('refreshToken', () => {
 		let capturedUrl = ''
 
 		setFetch(
-			mock((input: string | URL | Request) => {
+			vi.fn((input: string | URL | Request) => {
 				capturedUrl =
 					typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
 				return Promise.resolve(

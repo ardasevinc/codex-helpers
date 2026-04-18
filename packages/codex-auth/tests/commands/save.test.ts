@@ -1,31 +1,36 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
 	captureConsole,
 	ExitError,
 	importFresh,
 	mockAgent,
+	mockModule,
 	mockPrompts,
+	resetTestState,
 	runCommand,
+	setMockBaseUrl,
 	stubProcessExit,
 } from './helpers.ts'
 
+setMockBaseUrl(import.meta.url)
+
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 describe('saveCommand', () => {
 	test('saves current auth as named account', async () => {
 		const prompts = mockPrompts()
-		const saveAccount = mock((_name: string, _path: string) => {})
-		const accountExists = mock((_name: string) => false)
-		const validateName = mock((_name: string) => true)
-		const resolveAuthPath = mock(() => '/tmp/auth.json')
+		const saveAccount = vi.fn((_name: string, _path: string) => {})
+		const accountExists = vi.fn((_name: string) => false)
+		const validateName = vi.fn((_name: string) => true)
+		const resolveAuthPath = vi.fn(() => '/tmp/auth.json')
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			saveAccount,
 			accountExists,
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
+		mockModule('../../src/lib/paths.ts', () => ({
 			validateName,
 			resolveAuthPath,
 		}))
@@ -46,15 +51,15 @@ describe('saveCommand', () => {
 	test('errors on invalid name', async () => {
 		const prompts = mockPrompts()
 		const exit = stubProcessExit()
-		const validateName = mock((_name: string) => false)
+		const validateName = vi.fn((_name: string) => false)
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			saveAccount: mock(() => {}),
-			accountExists: mock(() => false),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			saveAccount: vi.fn(() => {}),
+			accountExists: vi.fn(() => false),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
+		mockModule('../../src/lib/paths.ts', () => ({
 			validateName,
-			resolveAuthPath: mock(() => '/tmp/auth.json'),
+			resolveAuthPath: vi.fn(() => '/tmp/auth.json'),
 		}))
 
 		try {
@@ -73,15 +78,15 @@ describe('saveCommand', () => {
 
 	test('prompts for overwrite when account exists', async () => {
 		const prompts = mockPrompts({ confirmResult: true })
-		const saveAccount = mock((_name: string, _path: string) => {})
+		const saveAccount = vi.fn((_name: string, _path: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			saveAccount,
-			accountExists: mock((_name: string) => true),
+			accountExists: vi.fn((_name: string) => true),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
-			resolveAuthPath: mock(() => '/tmp/auth.json'),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
+			resolveAuthPath: vi.fn(() => '/tmp/auth.json'),
 		}))
 
 		const { saveCommand } = await importFresh<typeof import('../../src/commands/save.ts')>(
@@ -100,13 +105,13 @@ describe('saveCommand', () => {
 		const consoleCapture = captureConsole()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			saveAccount: mock(() => {}),
-			accountExists: mock((_name: string) => true),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			saveAccount: vi.fn(() => {}),
+			accountExists: vi.fn((_name: string) => true),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
-			resolveAuthPath: mock(() => '/tmp/auth.json'),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
+			resolveAuthPath: vi.fn(() => '/tmp/auth.json'),
 		}))
 
 		try {
@@ -128,15 +133,15 @@ describe('saveCommand', () => {
 		mockPrompts()
 		mockAgent('codex')
 		const consoleCapture = captureConsole()
-		const saveAccount = mock((_name: string, _path: string) => {})
+		const saveAccount = vi.fn((_name: string, _path: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
 			saveAccount,
-			accountExists: mock((_name: string) => false),
+			accountExists: vi.fn((_name: string) => false),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
-			resolveAuthPath: mock(() => '/tmp/auth.json'),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
+			resolveAuthPath: vi.fn(() => '/tmp/auth.json'),
 		}))
 
 		try {

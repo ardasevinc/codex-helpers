@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { CurrentAccountState } from '../../src/lib/current.ts'
-import { importFresh } from './helpers.ts'
+import { importFresh, mockModule, resetTestState, setMockBaseUrl } from './helpers.ts'
+
+setMockBaseUrl(import.meta.url)
 
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 function okState(): CurrentAccountState {
@@ -37,7 +39,7 @@ function okState(): CurrentAccountState {
 
 describe('renderWatchFrame', () => {
 	test('renders active account usage in a bordered frame', async () => {
-		mock.module('../../src/lib/display.ts', () => ({
+		mockModule('../../src/lib/display.ts', () => ({
 			formatAccountUsage: () => ['5hr line', 'weekly line', 'credits: $5.39 remaining'],
 		}))
 		const { renderWatchFrame } = await importFresh<typeof import('../../src/commands/watch.ts')>(
@@ -89,7 +91,7 @@ describe('runWatch', () => {
 				write: (chunk) => {
 					chunks.push(chunk)
 				},
-				sleep: mock(async (_ms: number) => {}),
+				sleep: vi.fn(async (_ms: number) => {}),
 				isTTY: true,
 			},
 		)

@@ -1,30 +1,35 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
 	captureConsole,
 	ExitError,
 	importFresh,
 	mockAgent,
+	mockModule,
 	mockPrompts,
+	resetTestState,
 	runCommand,
+	setMockBaseUrl,
 	stubProcessExit,
 } from './helpers.ts'
 
+setMockBaseUrl(import.meta.url)
+
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 describe('deleteCommand', () => {
 	test('deletes account after confirmation', async () => {
 		const prompts = mockPrompts({ confirmResult: true })
-		const deleteAccount = mock((_name: string) => {})
+		const deleteAccount = vi.fn((_name: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => true),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => true),
 			deleteAccount,
-			getActiveAccount: mock(() => null),
+			getActiveAccount: vi.fn(() => null),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		const { deleteCommand } = await importFresh<typeof import('../../src/commands/delete.ts')>(
@@ -41,13 +46,13 @@ describe('deleteCommand', () => {
 		const prompts = mockPrompts()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock(() => false),
-			deleteAccount: mock(() => {}),
-			getActiveAccount: mock(() => null),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn(() => false),
+			deleteAccount: vi.fn(() => {}),
+			getActiveAccount: vi.fn(() => null),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => false),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => false),
 		}))
 
 		try {
@@ -68,13 +73,13 @@ describe('deleteCommand', () => {
 		const prompts = mockPrompts()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => false),
-			deleteAccount: mock(() => {}),
-			getActiveAccount: mock(() => null),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => false),
+			deleteAccount: vi.fn(() => {}),
+			getActiveAccount: vi.fn(() => null),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		try {
@@ -95,13 +100,13 @@ describe('deleteCommand', () => {
 		mockPrompts({ confirmResult: false })
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => true),
-			deleteAccount: mock(() => {}),
-			getActiveAccount: mock(() => null),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => true),
+			deleteAccount: vi.fn(() => {}),
+			getActiveAccount: vi.fn(() => null),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		try {
@@ -119,15 +124,15 @@ describe('deleteCommand', () => {
 
 	test('mentions active status in confirm message', async () => {
 		const prompts = mockPrompts({ confirmResult: true })
-		const deleteAccount = mock((_name: string) => {})
+		const deleteAccount = vi.fn((_name: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => true),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => true),
 			deleteAccount,
-			getActiveAccount: mock(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
+			getActiveAccount: vi.fn(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		const { deleteCommand } = await importFresh<typeof import('../../src/commands/delete.ts')>(
@@ -146,13 +151,13 @@ describe('deleteCommand', () => {
 		const consoleCapture = captureConsole()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => true),
-			deleteAccount: mock(() => {}),
-			getActiveAccount: mock(() => null),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => true),
+			deleteAccount: vi.fn(() => {}),
+			getActiveAccount: vi.fn(() => null),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		try {
@@ -175,13 +180,13 @@ describe('deleteCommand', () => {
 		mockAgent('codex')
 		const consoleCapture = captureConsole()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			accountExists: mock((_name: string) => true),
-			deleteAccount: mock((_name: string) => {}),
-			getActiveAccount: mock(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			accountExists: vi.fn((_name: string) => true),
+			deleteAccount: vi.fn((_name: string) => {}),
+			getActiveAccount: vi.fn(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
 		}))
-		mock.module('../../src/lib/paths.ts', () => ({
-			validateName: mock((_name: string) => true),
+		mockModule('../../src/lib/paths.ts', () => ({
+			validateName: vi.fn((_name: string) => true),
 		}))
 
 		try {

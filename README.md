@@ -16,7 +16,14 @@ Install dependencies from repo root:
 bun install
 ```
 
-Run the `codex-auth` package gate:
+Run the repo wrapper from the root:
+
+```bash
+bun run gate
+bun run full-gate
+```
+
+Or run the `codex-auth` package scripts directly:
 
 ```bash
 cd packages/codex-auth
@@ -30,7 +37,11 @@ cd packages/codex-auth
 bun run lint
 bun run typecheck
 bun run test
+bun run test:watch
+bun run full-gate
 ```
+
+Testing uses `vitest`, executed through Bun-managed package scripts.
 
 Release notes helper:
 

@@ -1,13 +1,18 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { fetchUsage, parseUsageResponse } from '../src/lib/usage.ts'
-import { mockUsageResponse } from './helpers.ts'
+import { mockUsageResponse, resetTestState } from './helpers.ts'
 
-const setFetch = (fn: any) => {
-	globalThis.fetch = fn
+type FetchHandler = (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+
+const setFetch = (fn: FetchHandler) => {
+	const mockFetch: typeof fetch = Object.assign(fn, {
+		preconnect: globalThis.fetch.preconnect,
+	})
+	globalThis.fetch = mockFetch
 }
 
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 describe('parseUsageResponse', () => {
@@ -72,7 +77,7 @@ describe('fetchUsage', () => {
 		let capturedHeaders: Headers | null = null
 
 		setFetch(
-			mock((_input: Request | string | URL, init?: RequestInit) => {
+			vi.fn((_input: Request | string | URL, init?: RequestInit) => {
 				capturedHeaders = new Headers(init?.headers)
 				return Promise.resolve(new Response(JSON.stringify(mockUsageResponse()), { status: 200 }))
 			}),
@@ -90,7 +95,7 @@ describe('fetchUsage', () => {
 		let capturedHeaders: Headers | null = null
 
 		setFetch(
-			mock((_input: Request | string | URL, init?: RequestInit) => {
+			vi.fn((_input: Request | string | URL, init?: RequestInit) => {
 				capturedHeaders = new Headers(init?.headers)
 				return Promise.resolve(new Response(JSON.stringify(mockUsageResponse()), { status: 200 }))
 			}),
@@ -102,19 +107,19 @@ describe('fetchUsage', () => {
 	})
 
 	test('throws AuthError on 401', async () => {
-		setFetch(mock(() => Promise.resolve(new Response('Unauthorized', { status: 401 }))))
+		setFetch(vi.fn(() => Promise.resolve(new Response('Unauthorized', { status: 401 }))))
 
 		await expect(fetchUsage('bad-token')).rejects.toThrow('Auth failed')
 	})
 
 	test('throws AuthError on 403', async () => {
-		setFetch(mock(() => Promise.resolve(new Response('Forbidden', { status: 403 }))))
+		setFetch(vi.fn(() => Promise.resolve(new Response('Forbidden', { status: 403 }))))
 
 		await expect(fetchUsage('bad-token')).rejects.toThrow('Auth failed')
 	})
 
 	test('throws on other HTTP errors', async () => {
-		setFetch(mock(() => Promise.resolve(new Response('Server Error', { status: 500 }))))
+		setFetch(vi.fn(() => Promise.resolve(new Response('Server Error', { status: 500 }))))
 
 		await expect(fetchUsage('token')).rejects.toThrow('Usage API returned 500')
 	})
@@ -122,7 +127,7 @@ describe('fetchUsage', () => {
 	test('fetches usage successfully', async () => {
 		const mockResp = mockUsageResponse({ plan_type: 'pro' })
 
-		setFetch(mock(() => Promise.resolve(new Response(JSON.stringify(mockResp), { status: 200 }))))
+		setFetch(vi.fn(() => Promise.resolve(new Response(JSON.stringify(mockResp), { status: 200 }))))
 
 		const result = await fetchUsage('token')
 		expect(result.plan_type).toBe('pro')

@@ -3,6 +3,13 @@
   "private": true,
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "lint": "cd packages/codex-auth && bun run lint",
+    "typecheck": "cd packages/codex-auth && bun run typecheck",
+    "test": "cd packages/codex-auth && bun run test",
+    "gate": "cd packages/codex-auth && bun run gate",
+    "full-gate": "bun run gate"
+  },
   "workspaces": [
     "packages/*"
   ],

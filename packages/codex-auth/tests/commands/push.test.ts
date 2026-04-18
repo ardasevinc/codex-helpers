@@ -1,8 +1,19 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
-import { captureConsole, importFresh, mockAgent, mockPrompts, runCommand } from './helpers.ts'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import {
+	captureConsole,
+	importFresh,
+	mockAgent,
+	mockModule,
+	mockPrompts,
+	resetTestState,
+	runCommand,
+	setMockBaseUrl,
+} from './helpers.ts'
+
+setMockBaseUrl(import.meta.url)
 
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 describe('pushCommand', () => {
@@ -11,8 +22,8 @@ describe('pushCommand', () => {
 		mockAgent('codex')
 		const consoleCapture = captureConsole()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			exportAccounts: mock(() => ({
+		mockModule('../../src/lib/accounts.ts', () => ({
+			exportAccounts: vi.fn(() => ({
 				main: {
 					OPENAI_API_KEY: null,
 					tokens: { access_token: 'a', refresh_token: 'b', id_token: 'c' },
@@ -26,7 +37,7 @@ describe('pushCommand', () => {
 			})),
 		}))
 
-		const spawn = mock((args: string[]) => {
+		const spawn = vi.fn((args: string[]) => {
 			const command = args.join(' ')
 			if (command.includes('mkdir -p')) {
 				return { exited: Promise.resolve(0), stderr: new Response('').body } as const

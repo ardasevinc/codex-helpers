@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { currentCommand } from '../src/commands/current.ts'
 import { normalizeRawArgs, validateRawArgs } from '../src/lib/argv.ts'
 

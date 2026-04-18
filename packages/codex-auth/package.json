@@ -9,8 +9,13 @@
   "scripts": {
     "lint": "bun run biome check .",
     "typecheck": "bun run tsc --noEmit -p tsconfig.json",
-    "test": "bun test",
-    "gate": "bun run lint && bun run typecheck && bun run test"
+    "test": "bun run vitest run",
+    "test:watch": "bun run vitest",
+    "gate": "bun run lint && bun run typecheck && bun run test",
+    "full-gate": "bun run gate"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.7"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.1",

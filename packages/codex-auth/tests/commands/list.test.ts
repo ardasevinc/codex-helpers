@@ -1,9 +1,20 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { AccountUsage } from '../../src/types.ts'
-import { captureConsole, importFresh, mockAgent, mockPrompts, runCommand } from './helpers.ts'
+import {
+	captureConsole,
+	importFresh,
+	mockAgent,
+	mockModule,
+	mockPrompts,
+	resetTestState,
+	runCommand,
+	setMockBaseUrl,
+} from './helpers.ts'
+
+setMockBaseUrl(import.meta.url)
 
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 function sampleUsage(): AccountUsage {
@@ -25,14 +36,14 @@ function sampleUsage(): AccountUsage {
 describe('listCommand', () => {
 	test('shows friendly message when no accounts exist', async () => {
 		const prompts = mockPrompts()
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => []),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => []),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(async () => new Map()),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock(() => ''),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn(() => ''),
 		}))
 
 		const { listCommand } = await importFresh<typeof import('../../src/commands/list.ts')>(
@@ -50,18 +61,18 @@ describe('listCommand', () => {
 		const usage = sampleUsage()
 		const logs: string[] = []
 		const originalLog = console.log
-		console.log = mock((...args: unknown[]) => {
+		console.log = vi.fn((...args: unknown[]) => {
 			logs.push(args.map(String).join(' '))
 		}) as typeof console.log
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [
 				{ name: 'personal', auth: {} as never, isActive: true },
 				{ name: 'work', auth: {} as never, isActive: false },
 			]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['personal', usage],
@@ -69,8 +80,8 @@ describe('listCommand', () => {
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock((label: string) => `${label}: line`),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn((label: string) => `${label}: line`),
 		}))
 
 		try {
@@ -93,23 +104,23 @@ describe('listCommand', () => {
 		mockPrompts()
 		const logs: string[] = []
 		const originalLog = console.log
-		console.log = mock((...args: unknown[]) => {
+		console.log = vi.fn((...args: unknown[]) => {
 			logs.push(args.map(String).join(' '))
 		}) as typeof console.log
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'pro-acc', auth: {} as never, isActive: false }]),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'pro-acc', auth: {} as never, isActive: false }]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['pro-acc', { ...sampleUsage(), planType: 'pro' }],
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock((label: string) => `${label}: line`),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn((label: string) => `${label}: line`),
 		}))
 
 		try {
@@ -128,23 +139,23 @@ describe('listCommand', () => {
 		mockPrompts()
 		const logs: string[] = []
 		const originalLog = console.log
-		console.log = mock((...args: unknown[]) => {
+		console.log = vi.fn((...args: unknown[]) => {
 			logs.push(args.map(String).join(' '))
 		}) as typeof console.log
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['dead', new Error('Session expired — re-login with `codex` CLI')],
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock(() => ''),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn(() => ''),
 		}))
 
 		try {
@@ -163,23 +174,23 @@ describe('listCommand', () => {
 		mockPrompts()
 		const logs: string[] = []
 		const originalLog = console.log
-		console.log = mock((...args: unknown[]) => {
+		console.log = vi.fn((...args: unknown[]) => {
 			logs.push(args.map(String).join(' '))
 		}) as typeof console.log
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'lapsed', auth: {} as never, isActive: false }]),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'lapsed', auth: {} as never, isActive: false }]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['lapsed', { ...sampleUsage(), planType: 'free' }],
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock(() => ''),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn(() => ''),
 		}))
 
 		try {
@@ -200,14 +211,14 @@ describe('listCommand', () => {
 		const usage = sampleUsage()
 		const consoleCapture = captureConsole()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [
 				{ name: 'personal', auth: {} as never, isActive: true },
 				{ name: 'dead', auth: {} as never, isActive: false },
 			]),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['personal', usage],
@@ -215,8 +226,8 @@ describe('listCommand', () => {
 					]),
 			),
 		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatUsageLine: mock(() => ''),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatUsageLine: vi.fn(() => ''),
 		}))
 
 		try {

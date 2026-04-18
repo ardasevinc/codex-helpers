@@ -1,9 +1,20 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { AccountUsage } from '../../src/types.ts'
-import { captureConsole, importFresh, mockAgent, mockPrompts, runCommand } from './helpers.ts'
+import {
+	captureConsole,
+	importFresh,
+	mockAgent,
+	mockModule,
+	mockPrompts,
+	resetTestState,
+	runCommand,
+	setMockBaseUrl,
+} from './helpers.ts'
+
+setMockBaseUrl(import.meta.url)
 
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 function sampleUsage(): AccountUsage {
@@ -30,15 +41,12 @@ function sampleUsage(): AccountUsage {
 describe('currentCommand', () => {
 	test('shows message when no active account exists', async () => {
 		const prompts = mockPrompts()
-		mock.module('../../src/lib/accounts.ts', () => ({
-			getActiveAccount: mock(() => null),
-			accountExists: mock((_name: string) => false),
+		mockModule('../../src/lib/current.ts', () => ({
+			getCurrentAccountTarget: vi.fn(() => ({ status: 'none' })),
+			getCurrentAccountState: vi.fn(async () => ({ status: 'none' })),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => sampleUsage()),
-		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => ['line 1']),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => ['line 1']),
 		}))
 
 		const { currentCommand } = await importFresh<typeof import('../../src/commands/current.ts')>(
@@ -53,15 +61,26 @@ describe('currentCommand', () => {
 
 	test('warns when active snapshot is missing', async () => {
 		const prompts = mockPrompts()
-		mock.module('../../src/lib/accounts.ts', () => ({
-			getActiveAccount: mock(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
-			accountExists: mock((_name: string) => false),
+		mockModule('../../src/lib/current.ts', () => ({
+			getCurrentAccountTarget: vi.fn(() => ({
+				status: 'missing_snapshot',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-18T00:00:00.000Z',
+					snapshotExists: false,
+				},
+			})),
+			getCurrentAccountState: vi.fn(async () => ({
+				status: 'missing_snapshot',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-18T00:00:00.000Z',
+					snapshotExists: false,
+				},
+			})),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => sampleUsage()),
-		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => ['line 1']),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => ['line 1']),
 		}))
 
 		const { currentCommand } = await importFresh<typeof import('../../src/commands/current.ts')>(
@@ -78,15 +97,27 @@ describe('currentCommand', () => {
 		const prompts = mockPrompts()
 		const usage = sampleUsage()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			getActiveAccount: mock(() => ({ name: 'personal', switched_at: new Date().toISOString() })),
-			accountExists: mock((_name: string) => true),
+		mockModule('../../src/lib/current.ts', () => ({
+			getCurrentAccountTarget: vi.fn(() => ({
+				status: 'ready',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-18T00:00:00.000Z',
+					snapshotExists: true,
+				},
+			})),
+			getCurrentAccountState: vi.fn(async () => ({
+				status: 'ok',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-18T00:00:00.000Z',
+					snapshotExists: true,
+				},
+				usage,
+			})),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => usage),
-		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock((_usage: AccountUsage) => [
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn((_usage: AccountUsage) => [
 				'5hr line',
 				'weekly line',
 				'credits line',
@@ -112,15 +143,27 @@ describe('currentCommand', () => {
 		const usage = sampleUsage()
 		const consoleCapture = captureConsole()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			getActiveAccount: mock(() => ({ name: 'personal', switched_at: '2026-04-12T10:00:00.000Z' })),
-			accountExists: mock((_name: string) => true),
+		mockModule('../../src/lib/current.ts', () => ({
+			getCurrentAccountTarget: vi.fn(() => ({
+				status: 'ready',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-12T10:00:00.000Z',
+					snapshotExists: true,
+				},
+			})),
+			getCurrentAccountState: vi.fn(async () => ({
+				status: 'ok',
+				active: {
+					name: 'personal',
+					switchedAt: '2026-04-12T10:00:00.000Z',
+					snapshotExists: true,
+				},
+				usage,
+			})),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchUsageForAccount: mock(async (_name: string) => usage),
-		}))
-		mock.module('../../src/lib/display.ts', () => ({
-			formatAccountUsage: mock(() => ['unused']),
+		mockModule('../../src/lib/display.ts', () => ({
+			formatAccountUsage: vi.fn(() => ['unused']),
 		}))
 
 		try {

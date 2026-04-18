@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import * as accounts from '../src/lib/accounts.ts'
 import { accountPath, setCodexDir } from '../src/lib/paths.ts'
 import { cleanTmpDir, createTmpDir, mockAuth, writeAuthFile } from './helpers.ts'
@@ -14,7 +15,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanTmpDir(tmpDir)
-	setCodexDir(join(require('node:os').homedir(), '.codex'))
+	setCodexDir(join(homedir(), '.codex'))
 })
 
 describe('saveAccount', () => {

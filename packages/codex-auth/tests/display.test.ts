@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { formatTimeRemaining, renderBar } from '../src/lib/display.ts'
 
 function expectColorOrPlain(bar: string, ansiCode: string, plainBar: string) {

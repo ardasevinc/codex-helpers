@@ -1,17 +1,22 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { AccountUsage } from '../../src/types.ts'
 import {
 	captureConsole,
 	ExitError,
 	importFresh,
 	mockAgent,
+	mockModule,
 	mockPrompts,
+	resetTestState,
 	runCommand,
+	setMockBaseUrl,
 	stubProcessExit,
 } from './helpers.ts'
 
+setMockBaseUrl(import.meta.url)
+
 afterEach(() => {
-	mock.restore()
+	resetTestState()
 })
 
 function okUsage(): AccountUsage {
@@ -34,12 +39,12 @@ describe('pruneCommand', () => {
 	test('shows info when no accounts saved', async () => {
 		const prompts = mockPrompts()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => []),
-			deleteAccount: mock(() => {}),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => []),
+			deleteAccount: vi.fn(() => {}),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(async () => new Map()),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(async () => new Map()),
 		}))
 
 		const { pruneCommand } = await importFresh<typeof import('../../src/commands/prune.ts')>(
@@ -53,12 +58,12 @@ describe('pruneCommand', () => {
 	test('shows info when all accounts healthy', async () => {
 		const prompts = mockPrompts()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'a', auth: {} as never, isActive: true }]),
-			deleteAccount: mock(() => {}),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'a', auth: {} as never, isActive: true }]),
+			deleteAccount: vi.fn(() => {}),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(async () => new Map<string, AccountUsage | Error>([['a', okUsage()]])),
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(async () => new Map<string, AccountUsage | Error>([['a', okUsage()]])),
 		}))
 
 		const { pruneCommand } = await importFresh<typeof import('../../src/commands/prune.ts')>(
@@ -71,23 +76,23 @@ describe('pruneCommand', () => {
 
 	test('deletes expired accounts after confirmation', async () => {
 		const prompts = mockPrompts({ confirmResult: true })
-		const deleteAccount = mock((_name: string) => {})
+		const deleteAccount = vi.fn((_name: string) => {})
 		const logs: string[] = []
 		const originalLog = console.log
-		console.log = mock((...args: unknown[]) => {
+		console.log = vi.fn((...args: unknown[]) => {
 			logs.push(args.map(String).join(' '))
 		}) as typeof console.log
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [
 				{ name: 'healthy', auth: {} as never, isActive: true },
 				{ name: 'dead', auth: {} as never, isActive: false },
 				{ name: 'lapsed', auth: {} as never, isActive: false },
 			]),
 			deleteAccount,
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['healthy', okUsage()],
@@ -116,14 +121,14 @@ describe('pruneCommand', () => {
 	test('cancels when user declines', async () => {
 		const prompts = mockPrompts({ confirmResult: false })
 		const exit = stubProcessExit()
-		const deleteAccount = mock((_name: string) => {})
+		const deleteAccount = vi.fn((_name: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
 			deleteAccount,
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['dead', new Error('Auth failed with status 401')],
@@ -149,12 +154,12 @@ describe('pruneCommand', () => {
 		const consoleCapture = captureConsole()
 		const exit = stubProcessExit()
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
-			deleteAccount: mock(() => {}),
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [{ name: 'dead', auth: {} as never, isActive: false }]),
+			deleteAccount: vi.fn(() => {}),
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['dead', new Error('Auth failed with status 401')],
@@ -179,17 +184,17 @@ describe('pruneCommand', () => {
 		mockPrompts()
 		mockAgent('codex')
 		const consoleCapture = captureConsole()
-		const deleteAccount = mock((_name: string) => {})
+		const deleteAccount = vi.fn((_name: string) => {})
 
-		mock.module('../../src/lib/accounts.ts', () => ({
-			listAccounts: mock(() => [
+		mockModule('../../src/lib/accounts.ts', () => ({
+			listAccounts: vi.fn(() => [
 				{ name: 'healthy', auth: {} as never, isActive: true },
 				{ name: 'dead', auth: {} as never, isActive: false },
 			]),
 			deleteAccount,
 		}))
-		mock.module('../../src/lib/usage.ts', () => ({
-			fetchAllUsage: mock(
+		mockModule('../../src/lib/usage.ts', () => ({
+			fetchAllUsage: vi.fn(
 				async () =>
 					new Map<string, AccountUsage | Error>([
 						['healthy', okUsage()],

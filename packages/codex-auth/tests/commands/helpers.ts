@@ -1,4 +1,13 @@
-import { mock } from 'bun:test'
+import { vi } from 'vitest'
+import { mockModule, resetTestState, setMockBaseUrl } from '../helpers.ts'
+
+export { mockModule, resetTestState, setMockBaseUrl }
+
+type DeepPartial<T> = T extends (...args: never[]) => unknown
+	? T
+	: T extends object
+		? { [K in keyof T]?: DeepPartial<T[K]> }
+		: T
 
 export class ExitError extends Error {
 	code: number
@@ -12,7 +21,7 @@ export class ExitError extends Error {
 
 export function stubProcessExit() {
 	const original = process.exit
-	const exitMock = mock((code?: number | string | null) => {
+	const exitMock = vi.fn((code?: number | string | null) => {
 		throw new ExitError(typeof code === 'number' ? code : 0)
 	})
 	process.exit = exitMock as unknown as typeof process.exit
@@ -29,18 +38,18 @@ export function mockPrompts(overrides?: {
 	selectResult?: string | symbol
 }) {
 	const cancelToken = Symbol('cancel')
-	const confirm = mock(async () => overrides?.confirmResult ?? true)
-	const select = mock(async () => overrides?.selectResult ?? 'personal')
-	const cancel = mock((_message: string) => {})
-	const note = mock((_message: string, _title?: string) => {})
-	const intro = mock((_message: string) => {})
-	const outro = mock((_message: string) => {})
-	const info = mock((_message: string) => {})
-	const warn = mock((_message: string) => {})
-	const spinnerStart = mock((_message: string) => {})
-	const spinnerStop = mock((_message: string) => {})
+	const confirm = vi.fn(async () => overrides?.confirmResult ?? true)
+	const select = vi.fn(async () => overrides?.selectResult ?? 'personal')
+	const cancel = vi.fn((_message: string) => {})
+	const note = vi.fn((_message: string, _title?: string) => {})
+	const intro = vi.fn((_message: string) => {})
+	const outro = vi.fn((_message: string) => {})
+	const info = vi.fn((_message: string) => {})
+	const warn = vi.fn((_message: string) => {})
+	const spinnerStart = vi.fn((_message: string) => {})
+	const spinnerStop = vi.fn((_message: string) => {})
 
-	mock.module('@clack/prompts', () => ({
+	mockModule('@clack/prompts', () => ({
 		confirm,
 		select,
 		cancel,
@@ -57,8 +66,8 @@ export function mockPrompts(overrides?: {
 		}),
 		isCancel: (value: unknown) => value === cancelToken,
 	}))
-	mock.module('is-ai-agent', () => ({
-		isAgent: mock(() => null),
+	mockModule('is-ai-agent', () => ({
+		isAgent: vi.fn(() => null),
 	}))
 
 	return {
@@ -77,9 +86,9 @@ export function mockPrompts(overrides?: {
 }
 
 export function mockAgent(agent: 'claude' | 'gemini' | 'codex' | 'opencode' | null = null) {
-	const isAgent = mock(() => agent)
+	const isAgent = vi.fn(() => agent)
 
-	mock.module('is-ai-agent', () => ({
+	mockModule('is-ai-agent', () => ({
 		isAgent,
 	}))
 
@@ -94,13 +103,13 @@ export function captureConsole() {
 	const warns: string[] = []
 	const errors: string[] = []
 
-	console.log = mock((...args: unknown[]) => {
+	console.log = vi.fn((...args: unknown[]) => {
 		logs.push(args.map(String).join(' '))
 	}) as typeof console.log
-	console.warn = mock((...args: unknown[]) => {
+	console.warn = vi.fn((...args: unknown[]) => {
 		warns.push(args.map(String).join(' '))
 	}) as typeof console.warn
-	console.error = mock((...args: unknown[]) => {
+	console.error = vi.fn((...args: unknown[]) => {
 		errors.push(args.map(String).join(' '))
 	}) as typeof console.error
 
@@ -120,12 +129,15 @@ let importCounter = 0
 
 export async function importFresh<T>(path: string): Promise<T> {
 	importCounter += 1
-	return (await import(`${path}?test=${importCounter}`)) as T
+	return (await import(/* @vite-ignore */ `${path}?test=${importCounter}`)) as T
 }
 
-export async function runCommand(command: { run?: (ctx: any) => any }, ctx: any) {
+export async function runCommand<TContext>(
+	command: { run?: (ctx: TContext) => unknown | Promise<unknown> },
+	ctx: DeepPartial<TContext>,
+) {
 	if (!command.run) {
 		throw new Error('Command has no run() handler')
 	}
-	return await command.run(ctx)
+	return await command.run(ctx as TContext)
 }
