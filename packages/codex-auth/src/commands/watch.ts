@@ -7,6 +7,7 @@ import { fail, resolveOutputMode } from '../lib/output.ts'
 const CLEAR_SCREEN = '\x1b[2J\x1b[H'
 const MIN_INTERVAL_SECONDS = 1
 const DEFAULT_INTERVAL_SECONDS = 5
+const TOP_PADDING_LINES = 1
 
 type WatchDeps = {
 	getState: typeof getCurrentAccountState
@@ -74,11 +75,13 @@ export function renderWatchFrame(
 
 	const lines = [...metaLines, '', ...contentLines]
 	const width = Math.max(60, visibleLength(frameTitle(state)), ...lines.map(visibleLength))
+	const border = '─'.repeat(width + 2)
 
 	return [
-		`╭─ ${padRight(frameTitle(state), width)} ─╮`,
+		`╭${border}╮`,
+		`│ ${padRight(frameTitle(state), width)} │`,
 		...lines.map((line) => `│ ${padRight(line, width)} │`),
-		`╰─${'─'.repeat(width + 2)}╯`,
+		`╰${border}╯`,
 	].join('\n')
 }
 
@@ -105,10 +108,11 @@ export async function runWatch(
 			intervalSeconds: options.intervalSeconds,
 			now: deps.now(),
 		})
+		const output = `${'\n'.repeat(TOP_PADDING_LINES)}${frame}\n`
 		if (!options.once && deps.isTTY) {
 			deps.write(CLEAR_SCREEN)
 		}
-		deps.write(`${frame}\n`)
+		deps.write(output)
 
 		if (options.once) {
 			return
