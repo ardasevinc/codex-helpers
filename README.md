@@ -101,10 +101,14 @@ just install
 
 Commands:
 
-- `codexhelp defib` — reserved recovery command; behavior intentionally unset for now
+- `codexhelp defib [--target cli|app|all] [--dry-run] [--yes] [--surgery] [--json]` — diagnose and repair Codex app-server runtime state
 - `codexhelp install [version] [--print] [--go-install]` — install from release assets or Go module path
 - `codexhelp update [--check] [--print] [--go-install]` — check or run the update path
 - `codexhelp version` / `codexhelp -v` / `codexhelp -V` — print the current version
+
+`defib` defaults to `--target cli`, preserves stale runtime files by moving them
+to `$CODEX_HOME/defib-quarantine`, and refuses to mutate when the daemon reports
+active loaded threads. Use `--dry-run --json` for non-interactive diagnostics.
 
 ## codex-auth CLI
 
