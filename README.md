@@ -94,7 +94,7 @@ bun link
 Or install the Go helper locally:
 
 ```bash
-go install ./cmd/codexhelp
+just install
 ```
 
 ## codexhelp CLI

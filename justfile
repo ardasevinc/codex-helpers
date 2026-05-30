@@ -30,6 +30,9 @@ build:
 build-go:
     bun run build:go
 
+install:
+    go install ./cmd/codexhelp
+
 gate:
     bun run gate
 
