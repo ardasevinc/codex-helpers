@@ -25,6 +25,10 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
       - run: bun install --frozen-lockfile
 
       - name: Parse tag
@@ -42,11 +46,34 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           PACKAGE: ${{ steps.parse.outputs.package }}
+          VERSION: ${{ steps.parse.outputs.version }}
         run: |
           SUFFIX="${TARGET#bun-}"
-          bun build --compile --minify --target="${TARGET}" \
-            "packages/${PACKAGE}/src/cli.ts" \
-            --outfile "${PACKAGE}-${SUFFIX}"
+          case "${PACKAGE}" in
+            codex-auth)
+              bun build --compile --minify --target="${TARGET}" \
+                "packages/${PACKAGE}/src/cli.ts" \
+                --outfile "${PACKAGE}-${SUFFIX}"
+              ;;
+            codexhelp)
+              case "${SUFFIX}" in
+                linux-x64) GOOS=linux GOARCH=amd64 ;;
+                linux-arm64) GOOS=linux GOARCH=arm64 ;;
+                darwin-x64) GOOS=darwin GOARCH=amd64 ;;
+                darwin-arm64) GOOS=darwin GOARCH=arm64 ;;
+                *) echo "Unsupported Go target: ${SUFFIX}" >&2; exit 1 ;;
+              esac
+              export GOOS GOARCH CGO_ENABLED=0
+              go build \
+                -ldflags "-s -w -X github.com/ardasevinc/codex-helpers/internal/codexhelp/buildinfo.Version=${VERSION} -X github.com/ardasevinc/codex-helpers/internal/codexhelp/buildinfo.Commit=${GITHUB_SHA}" \
+                -o "${PACKAGE}-${SUFFIX}" \
+                ./cmd/codexhelp
+              ;;
+            *)
+              echo "Unknown release package: ${PACKAGE}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Upload release asset
         env:

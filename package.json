@@ -4,11 +4,18 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "lint": "cd packages/codex-auth && bun run lint",
-    "typecheck": "cd packages/codex-auth && bun run typecheck",
-    "test": "cd packages/codex-auth && bun run test",
-    "gate": "cd packages/codex-auth && bun run gate",
-    "full-gate": "bun run gate"
+    "lint": "bun run lint:ts && bun run lint:go",
+    "lint:ts": "cd packages/codex-auth && bun run lint",
+    "lint:go": "test -z \"$(find cmd internal -name '*.go' -print | xargs gofumpt -l)\" && go vet ./... && staticcheck ./... && golangci-lint run ./...",
+    "typecheck": "bun run typecheck:ts",
+    "typecheck:ts": "cd packages/codex-auth && bun run typecheck",
+    "test": "bun run test:ts && bun run test:go",
+    "test:ts": "cd packages/codex-auth && bun run test",
+    "test:go": "go test ./...",
+    "build": "bun run build:go",
+    "build:go": "go build -o bin/codexhelp ./cmd/codexhelp",
+    "gate": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "full-gate": "bun run gate && gosec ./... && govulncheck ./..."
   },
   "workspaces": [
     "packages/*"

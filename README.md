@@ -1,12 +1,13 @@
 # codex-helpers
 
-Bun monorepo for Codex CLI helper tools.
+Polyglot repo for Codex CLI helper tools.
 
 > **Disclaimer**: This project is not affiliated with, endorsed by, or associated with OpenAI. It's an independent developer utility that works with the [Codex CLI](https://github.com/openai/codex).
 
 ## Packages
 
 - `packages/codex-auth`: switch between saved Codex auth sessions and view usage.
+- `cmd/codexhelp`: Go CLI for Codex recovery and maintenance helpers.
 
 ## Development
 
@@ -43,6 +44,23 @@ bun run full-gate
 
 Testing uses `vitest`, executed through Bun-managed package scripts.
 
+Go tooling follows the local Go CLI convention used by `tele`, `cx`, and `nazar`:
+
+```bash
+go test ./...
+go vet ./...
+staticcheck ./...
+golangci-lint run ./...
+gosec ./...
+govulncheck ./...
+```
+
+Build `codexhelp` locally:
+
+```bash
+go build -o bin/codexhelp ./cmd/codexhelp
+```
+
 Release notes helper:
 
 ```bash
@@ -59,6 +77,7 @@ gh release create codex-auth-v0.3.3 \
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ardasevinc/codex-helpers/main/install.sh | sh -s -- codex-auth
+curl -fsSL https://raw.githubusercontent.com/ardasevinc/codex-helpers/main/install.sh | sh -s -- codexhelp
 ```
 
 Or link locally for development:
@@ -67,6 +86,20 @@ Or link locally for development:
 cd packages/codex-auth
 bun link
 ```
+
+Or install the Go helper locally:
+
+```bash
+go install ./cmd/codexhelp
+```
+
+## codexhelp CLI
+
+Commands:
+
+- `codexhelp defib` — reserved recovery command; behavior intentionally unset for now
+- `codexhelp update [--check] [--print] [--go-install]` — check or run the update path
+- `codexhelp version` / `codexhelp -v` / `codexhelp -V` — print the current version
 
 ## codex-auth CLI
 
