@@ -20,6 +20,10 @@ bun install
 Run the repo wrapper from the root:
 
 ```bash
+just gate
+just full-gate
+
+# Bun wrappers are kept for CI and compatibility:
 bun run gate
 bun run full-gate
 ```
@@ -59,6 +63,13 @@ Build `codexhelp` locally:
 
 ```bash
 go build -o bin/codexhelp ./cmd/codexhelp
+```
+
+Or through the task runner:
+
+```bash
+just codexhelp --help
+just codexhelp defib
 ```
 
 Release notes helper:
