@@ -83,6 +83,7 @@ func NewRootCommand(state *appState) *cobra.Command {
 	}
 	root.SetVersionTemplate("codexhelp {{.Version}}\n")
 	root.AddCommand(newDefibCommand(state))
+	root.AddCommand(newInstallCommand(state))
 	root.AddCommand(newUpdateCommand(state))
 	root.AddCommand(newVersionCommand(state))
 	return root

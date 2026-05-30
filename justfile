@@ -35,6 +35,3 @@ gate:
 
 full-gate:
     bun run full-gate
-
-codexhelp *args:
-    go run ./cmd/codexhelp {{args}}

@@ -50,3 +50,11 @@ func TestInstallCommandWithoutVersionUsesLatestInstallerPath(t *testing.T) {
 		t.Fatalf("installCommand = %q, want %q", got, want)
 	}
 }
+
+func TestInstallCommandCanUseGoInstall(t *testing.T) {
+	got := installCommand("codexhelp-v0.1.2", true)
+	want := "go install github.com/ardasevinc/codex-helpers/cmd/codexhelp@codexhelp-v0.1.2"
+	if got != want {
+		t.Fatalf("installCommand = %q, want %q", got, want)
+	}
+}

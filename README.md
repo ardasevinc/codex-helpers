@@ -65,13 +65,6 @@ Build `codexhelp` locally:
 go build -o bin/codexhelp ./cmd/codexhelp
 ```
 
-Or through the task runner:
-
-```bash
-just codexhelp --help
-just codexhelp defib
-```
-
 Release notes helper:
 
 ```bash
@@ -109,6 +102,7 @@ go install ./cmd/codexhelp
 Commands:
 
 - `codexhelp defib` — reserved recovery command; behavior intentionally unset for now
+- `codexhelp install [version] [--print] [--go-install]` — install from release assets or Go module path
 - `codexhelp update [--check] [--print] [--go-install]` — check or run the update path
 - `codexhelp version` / `codexhelp -v` / `codexhelp -V` — print the current version
 

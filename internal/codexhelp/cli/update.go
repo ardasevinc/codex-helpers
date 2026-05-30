@@ -78,6 +78,32 @@ func newUpdateCommand(state *appState) *cobra.Command {
 	return cmd
 }
 
+func newInstallCommand(state *appState) *cobra.Command {
+	var printOnly bool
+	var viaGoInstall bool
+	cmd := &cobra.Command{
+		Use:   "install [version]",
+		Short: "Print or run the codexhelp install path",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			version := ""
+			if len(args) == 1 {
+				version = args[0]
+			}
+			command := installCommand(version, viaGoInstall)
+			if printOnly {
+				_, _ = fmt.Fprintln(state.out, command)
+				return nil
+			}
+			_, _ = fmt.Fprintf(state.out, "running: %s\n", command)
+			return runInstall(cmd.Context(), version, viaGoInstall)
+		},
+	}
+	cmd.Flags().BoolVar(&printOnly, "print", false, "print the install command without running it")
+	cmd.Flags().BoolVar(&viaGoInstall, "go-install", false, "use go install instead of the release installer")
+	return cmd
+}
+
 func checkLatest(ctx context.Context, current string) (updateCheck, error) {
 	latest, err := latestTag(ctx)
 	if err != nil {
